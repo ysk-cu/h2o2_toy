@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/yk/miniconda/envs/**)",
+      "Bash(/home/yk/miniconda/envs/nn_env/bin/python -c ' *)",
+      "Bash(ls /home/yk/h2o2_toy/*_meta.json 2>/dev/null && rm /home/yk/h2o2_toy/*_meta.json && echo \"Deleted all stale meta files\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import pandas as pd; df = pd.read_csv\\('/home/yk/h2o2_toy/Hong et al_Burke.csv'\\); print\\(df.columns.tolist\\(\\)\\); print\\(df.head\\(3\\)\\)\")",
+      "Bash(sort -t',' -k1 -n \"/home/yk/h2o2_toy/Hong et al_Burke.csv\")",
+      "Bash(python diagnose_oh_targets.py)",
+      "Bash(python3 /tmp/claude-1015/-home-yk-h2o2-toy/0510ce3a-d386-4b28-983d-c9ec3aa7431b/scratchpad/make_notebook.py)",
+      "Bash(python3 -c \"import json; nb=json.load\\(open\\('optimize_1192k_h2o_oh.ipynb'\\)\\); print\\('Valid JSON,', len\\(nb['cells']\\), 'cells'\\)\")"
+    ],
+    "additionalDirectories": [
+      "/home/yk/h2o2_toy"
+    ]
+  }
+}

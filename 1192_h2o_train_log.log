@@ -1,0 +1,51 @@
+R22: A=2.490e+21  Ea=48749 cal/mol
+R26: A=7.590e+10  Ea=7270 cal/mol
+
+Running nominal H2O profile (1 ms) ...
+  H2O initial = 1365.3 ppm   H2O plateau = 3555.1 ppm
+
+H2O target times:
+  1. 20% rise  t = 0.034 ms   H2O ≈ 1814.5 ppm
+  2. 40% rise  t = 0.070 ms   H2O ≈ 2241.8 ppm
+  3. 60% rise  t = 0.121 ms   H2O ≈ 2681.4 ppm
+  4. 80% rise  t = 0.206 ms   H2O ≈ 3119.8 ppm
+  5. 95% rise  t = 0.374 ms   H2O ≈ 3445.9 ppm
+
+Resuming from idx 40000/40000: 40000 valid, 0 dropped, 0 failed
+
+Sample generation: 0.8 s  (0.01 min)  0.0 sim/s  failed=0
+
+Shapes: X=(40000, 4)  Y=(40000, 5)  (failed=0)
+Split: train=32000  val=4000  test=4000
+
+Training (1192K H2O surrogate, 1 ms, ReLU, relative error loss) ...
+  ep     1 | train 8.9959e+01 | val 6.4275e-01 | gap 0.007 | wd 5.0e-07 | lr 3.0e-02
+  ep   500 | train 3.0376e-02 | val 5.2827e-02 | gap 1.739 | wd 2.0e-08 | lr 3.0e-02
+  ep  1000 | train 1.6269e-02 | val 1.8128e-02 | gap 1.114 | wd 2.0e-08 | lr 3.0e-02
+  ep  1500 | train 9.5175e-03 | val 1.0008e-02 | gap 1.051 | wd 1.0e-08 | lr 7.5e-03
+  ep  2000 | train 1.1096e-02 | val 1.1278e-02 | gap 1.016 | wd 1.0e-08 | lr 7.5e-03
+  ep  2500 | train 8.3868e-03 | val 8.4576e-03 | gap 1.008 | wd 1.0e-08 | lr 3.7e-03
+  ep  3000 | train 8.2184e-03 | val 8.3262e-03 | gap 1.013 | wd 1.0e-08 | lr 1.9e-03
+  ep  3500 | train 8.1333e-03 | val 8.2894e-03 | gap 1.019 | wd 1.0e-08 | lr 9.4e-04
+  ep  4000 | train 8.0856e-03 | val 8.2026e-03 | gap 1.014 | wd 1.0e-08 | lr 4.7e-04
+  ep  4500 | train 8.0708e-03 | val 8.1659e-03 | gap 1.012 | wd 1.0e-08 | lr 1.2e-04
+  ep  5000 | train 8.0598e-03 | val 8.1612e-03 | gap 1.013 | wd 1.0e-08 | lr 2.9e-05
+Done in 26.5 min.  Best val: 8.1588e-03
+
+======================================================================
+  1192K H2O surrogate  |  Zhang Table 1
+======================================================================
+  Set 1  σ=0.1   N=661    mean=  0.65%  (≤1%)   p95=  1.66%  (≤2%)   PASS
+  Set 2  σ=0.3   N=659    mean=  0.78%  (≤2%)   p95=  2.44%  (≤5%)   PASS
+  Set 3  σ=0.5   N=2680   mean=  0.84%  (≤3%)   p95=  2.73%  (≤10%)   PASS
+======================================================================
+MEETS all Zhang Table 1 requirements.
+
+Per-H2O-target mean relative error (%):
+  1. 20% rise  t=0.034 ms   err=0.98%
+  2. 40% rise  t=0.070 ms   err=0.84%
+  3. 60% rise  t=0.121 ms   err=0.75%
+  4. 80% rise  t=0.206 ms   err=0.69%
+  5. 95% rise  t=0.374 ms   err=0.75%
+
+Saved: result_1192k_h2o_train.pt
