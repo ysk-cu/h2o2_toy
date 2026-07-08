@@ -57,7 +57,7 @@ del _gas_nom
 print(f'R22: A={NOMINAL_A_R22:.3e}  Ea={NOMINAL_EA_R22_cal:.0f} cal/mol')
 print(f'R26: A={NOMINAL_A_R26:.3e}  Ea={NOMINAL_EA_R26_cal:.0f} cal/mol')
 
-LN_F        = 10
+LN_F        = 3
 SIGMA_E     = 5000.0
 PARAM_NAMES = ['lnA_R22', 'Ea_R22', 'lnA_R26', 'Ea_R26']
 INPUT_DIM   = 4
@@ -99,8 +99,8 @@ wd_min, wd_max = 1e-8, 1e-4
 wd_gap_high    = 1.10
 wd_gap_low     = 1.02
 
-CHECKPOINT_PATH = 'ckpt_1192k_h2o_train.pt'
-RESULT_PATH     = 'result_1192k_h2o_train.pt'
+CHECKPOINT_PATH = 'ckpt_1192k_h2o_train_3pts.pt'
+RESULT_PATH     = 'result_1192k_h2o_train_3pts.pt'
 SIGMA_REQS      = {0.1: (0.01, 0.02), 0.3: (0.02, 0.05), 0.5: (0.03, 0.10)}
 LOG_EPS         = 1e-12
 
@@ -127,7 +127,9 @@ _h2o_inf = float(_nom_h2o[-200:].mean())
 print(f'  H2O initial = {_h2o_0*1e6:.1f} ppm   H2O plateau = {_h2o_inf*1e6:.1f} ppm')
 
 # 5 target times at 20 / 40 / 60 / 80 / 95% of the H2O rise
-_fracs   = np.array([0.20, 0.40, 0.60, 0.80, 0.95])
+# _fracs   = np.array([0.20, 0.40, 0.60, 0.80, 0.95])
+# 3 target times at 20 / 60 / 95% of the H2O rise
+_fracs   = np.array([0.20, 0.60, 0.95])
 _targets = _h2o_0 + _fracs * (_h2o_inf - _h2o_0)
 TARGET_TIMES = np.array([
     T_SIM[np.argmax(_nom_h2o >= xt)] if np.any(_nom_h2o >= xt)
@@ -397,6 +399,10 @@ torch.save({
     'model_state':  model.state_dict(),
     'test_indices': list(test_ds.indices),
     'target_times': TARGET_TIMES,
+    'hidden_dim':   HIDDEN_DIM,
+    'n_targets':    N_TARGETS,
+    'ln_f':         LN_F,
+    'sigma_e':      SIGMA_E,
     'train_losses': train_losses,
     'val_losses':   val_losses,
     'val_epochs':   val_epochs,
