@@ -7,63 +7,63 @@ Running nominal OH profile (1 ms, const-P) ...
 Selected OH target probes (nominal):
   1. rise (50% up)           nominal ~ 39.82 ppm
   2. [OH]_peak               nominal ~ 77.51 ppm
-  3. OH @ 2·t_peak           nominal ~ 69.34 ppm
-  4. OH @ 5·t_peak           nominal ~ 62.13 ppm
-  5. OH @ 0.1ms              nominal ~ 61.35 ppm
+  3. OH @ 3.5·t_peak         nominal ~ 69.34 ppm
+  4. OH @ 0.1ms              nominal ~ 61.35 ppm
+  5. OH @ 0.5ms              nominal ~ 29.90 ppm
 
 Starting fresh: 40000 simulations
-  2000/40000  212.4 sim/s  failed=0
-  4000/40000  211.9 sim/s  failed=0
-  6000/40000  211.1 sim/s  failed=0
-  8000/40000  210.3 sim/s  failed=0
-  10000/40000  209.6 sim/s  failed=0
-  12000/40000  208.9 sim/s  failed=0
-  14000/40000  208.2 sim/s  failed=0
-  16000/40000  207.5 sim/s  failed=0
-  18000/40000  206.9 sim/s  failed=0
-  20000/40000  206.3 sim/s  failed=0
-  22000/40000  205.7 sim/s  failed=0
-  24000/40000  205.0 sim/s  failed=0
-  26000/40000  204.4 sim/s  failed=0
-  28000/40000  203.7 sim/s  failed=0
-  30000/40000  203.1 sim/s  failed=0
-  32000/40000  202.4 sim/s  failed=0
-  34000/40000  201.8 sim/s  failed=0
-  36000/40000  201.1 sim/s  failed=0
-  38000/40000  200.5 sim/s  failed=0
-  40000/40000  199.9 sim/s  failed=0
+  2000/40000  187.2 sim/s  failed=0
+  4000/40000  186.6 sim/s  failed=0
+  6000/40000  185.9 sim/s  failed=0
+  8000/40000  185.0 sim/s  failed=0
+  10000/40000  184.4 sim/s  failed=0
+  12000/40000  184.0 sim/s  failed=0
+  14000/40000  183.5 sim/s  failed=0
+  16000/40000  182.8 sim/s  failed=0
+  18000/40000  182.1 sim/s  failed=0
+  20000/40000  181.5 sim/s  failed=0
+  22000/40000  180.9 sim/s  failed=0
+  24000/40000  180.2 sim/s  failed=0
+  26000/40000  179.6 sim/s  failed=0
+  28000/40000  179.1 sim/s  failed=0
+  30000/40000  178.6 sim/s  failed=0
+  32000/40000  178.1 sim/s  failed=0
+  34000/40000  177.6 sim/s  failed=0
+  36000/40000  177.1 sim/s  failed=0
+  38000/40000  176.6 sim/s  failed=0
+  40000/40000  176.1 sim/s  failed=0
 
 Shapes: X=(40000, 4)  Y=(40000, 5)  (failed=0)
 Split: train=32000  val=4000  test=4000
 
-Training (1192 K OH, 5-pt: rise/OH_peak/2×t_peak/5×t_peak/0.5ms, ReLU) ...
-  ep     1 | train 1.5589e+04 | val 9.7924e+01 | gap 0.006 | wd 5.0e-07 | lr 3.0e-02
-  ep   500 | train 4.1976e-02 | val 3.3796e-02 | gap 0.805 | wd 1.0e-08 | lr 3.0e-02
-  ep  1000 | train 2.6566e-02 | val 2.5092e-02 | gap 0.945 | wd 1.0e-08 | lr 1.5e-02
-  ep  1500 | train 2.1839e-02 | val 2.2655e-02 | gap 1.037 | wd 1.0e-08 | lr 7.5e-03
-  ep  2000 | train 2.0866e-02 | val 2.0358e-02 | gap 0.976 | wd 1.0e-08 | lr 3.7e-03
-  ep  2500 | train 1.9486e-02 | val 1.9596e-02 | gap 1.006 | wd 1.0e-08 | lr 3.7e-03
-  ep  3000 | train 1.8919e-02 | val 1.8501e-02 | gap 0.978 | wd 1.0e-08 | lr 3.7e-03
-  ep  3500 | train 1.8409e-02 | val 1.8061e-02 | gap 0.981 | wd 1.0e-08 | lr 1.9e-03
-  ep  4000 | train 1.8282e-02 | val 1.7956e-02 | gap 0.982 | wd 1.0e-08 | lr 4.7e-04
-  ep  4500 | train 1.8233e-02 | val 1.7913e-02 | gap 0.982 | wd 1.0e-08 | lr 2.3e-04
-  ep  5000 | train 1.8215e-02 | val 1.7910e-02 | gap 0.983 | wd 1.0e-08 | lr 5.9e-05
-Done in 19.5 min.  Best val: 1.7907e-02
+Training (1192 K OH, 5-pt: rise/OH_peak/2×t_peak/5×t_peak/0.1ms, ReLU) ...
+  ep     1 | train 1.0904e+04 | val 9.2320e+01 | gap 0.008 | wd 5.0e-07 | lr 3.0e-02
+  ep   500 | train 5.0794e-02 | val 4.4062e-02 | gap 0.867 | wd 1.0e-08 | lr 3.0e-02
+  ep  1000 | train 3.3593e-02 | val 3.2661e-02 | gap 0.972 | wd 1.0e-08 | lr 1.5e-02
+  ep  1500 | train 2.9083e-02 | val 2.9725e-02 | gap 1.022 | wd 1.0e-08 | lr 3.7e-03
+  ep  2000 | train 2.9342e-02 | val 2.9693e-02 | gap 1.012 | wd 1.0e-08 | lr 3.7e-03
+  ep  2500 | train 2.8680e-02 | val 2.8740e-02 | gap 1.002 | wd 1.0e-08 | lr 1.9e-03
+  ep  3000 | train 2.8572e-02 | val 2.8724e-02 | gap 1.005 | wd 1.0e-08 | lr 9.4e-04
+  ep  3500 | train 2.8510e-02 | val 2.8724e-02 | gap 1.008 | wd 1.0e-08 | lr 4.7e-04
+  ep  4000 | train 2.8460e-02 | val 2.8524e-02 | gap 1.002 | wd 1.0e-08 | lr 2.3e-04
+  ep  4500 | train 2.8432e-02 | val 2.8487e-02 | gap 1.002 | wd 1.0e-08 | lr 1.2e-04
+  ep  5000 | train 2.8417e-02 | val 2.8488e-02 | gap 1.002 | wd 1.0e-08 | lr 5.9e-05
+Done in 19.5 min.  Best val: 2.8476e-02
 
 ========================================================================
   1192 K OH — 5-pt (rise/OH_peak/2×t_peak/5×t_peak/0.5ms)  |  Zhang Table 1
 ========================================================================
-  Set 1  sigma=0.1  N=661    mean=  0.78% (<= 1%)  p95=  2.54% (<= 2%)  FAIL
-  Set 2  sigma=0.3  N=659    mean=  1.37% (<= 2%)  p95=  4.33% (<= 5%)  PASS
-  Set 3  sigma=0.5  N=2680   mean=  2.16% (<= 3%)  p95=  7.14% (<= 10%)  PASS
+  Set 1  sigma=0.1  N=661    mean=  1.09% (<= 1%)  p95=  4.24% (<= 2%)  FAIL
+  Set 2  sigma=0.3  N=659    mean=  1.99% (<= 2%)  p95=  6.53% (<= 5%)  FAIL
+  Set 3  sigma=0.5  N=2680   mean=  3.47% (<= 3%)  p95= 12.70% (<= 10%)  FAIL
 ========================================================================
 does NOT meet all Zhang Table 1 requirements.
 
 Per-target mean relative error (%):
-  1. rise (50% up)          t=0.0029 ms   err=1.25%
-  2. [OH]_peak              t=0.0126 ms   err=1.75%
-  3. OH @ 2·t_peak          t=0.0252 ms   err=1.66%
-  4. OH @ 5·t_peak          t=0.0630 ms   err=1.93%
-  5. OH @ 0.1ms             t=0.1000 ms   err=2.40%
+  1. rise (50% up)          t=0.0029 ms   err=1.07%
+  2. [OH]_peak              t=0.0126 ms   err=1.51%
+  3. OH @ 3.5·t_peak        t=0.0252 ms   err=1.99%
+  4. OH @ 0.1ms             t=0.1000 ms   err=2.22%
+  5. OH @ 0.5ms             t=0.8000 ms   err=7.37%
 
 Saved: result_1192k_oh_train.pt

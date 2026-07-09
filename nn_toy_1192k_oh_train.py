@@ -6,14 +6,14 @@
 # Mixture: 2216 ppm H2O2 / 1364 ppm H2O / 682 ppm O2 / Ar
 #
 # Effective OH target points (3), chosen by information content:
-#   1. rise        (~50% up the rise)    -> constrains k1 (formation, R22)
+#   1. rise        (~50% up the rise)    -> constrains k1 (formation, R1)
 #   2. peak        (argmax OH)           -> constrains k2/k1 ratio  ([OH]peak diagnostic)
-#   3. mid-decay   (33% down the decay)  -> constrains k2 (removal, R26)
+#   3. mid-decay   (33% down the decay)  -> constrains k2 (removal, R2)
 # At 1192 K the OH decay is k2-controlled (k5/R5 is minor below ~1176 K), so the
 # two decay points are what give k2 its identifiability here.
 #
 # Active parameters (MUST match the H2O surrogate for a joint fit):
-#   x[0]=lnA_R22  x[1]=Ea_R22  x[2]=lnA_R26  x[3]=Ea_R26
+#   x[0]=lnA_R1  x[1]=Ea_R1  x[2]=lnA_R2  x[3]=Ea_R2
 #
 # NOTE 1 (consistency): LN_F and SIGMA_E below define the x-normalization. They MUST
 #   be identical to the values used in nn_toy_1192k_h2o_infer.py, or the shared x in
@@ -38,8 +38,6 @@ import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader, random_split
 from scipy.stats import qmc, norm
 
-torch.set_num_threads(16)
-
 SEED = 42
 np.random.seed(SEED)
 torch.manual_seed(SEED)
@@ -52,30 +50,30 @@ mol_units = ct.UnitSystem({
     "quantity": "mol", "pressure": "dyn / cm^2", "energy": "erg",
     "temperature": "K", "current": "A", "activation-energy": "cal / mol"})
 
-IDX_R22 = 21   # H2O2(+M) <=> OH + OH (+M)  — falloff   (k1)
-IDX_R26 = 25   # H2O2 + OH <=> HO2 + H2O    — Arrhenius (k2, single-channel here)
+IDX_R1 = 21   # H2O2(+M) <=> OH + OH (+M)  — falloff   (k1)
+IDX_R2 = 25   # H2O2 + OH <=> HO2 + H2O    — Arrhenius (k2, single-channel here)
 
 _gas_nom = ct.Solution(YAML_FILE)
-NOMINAL_A_R22      = _gas_nom.reaction(IDX_R22).rate.low_rate.pre_exponential_factor
-NOMINAL_B_R22      = _gas_nom.reaction(IDX_R22).rate.low_rate.temperature_exponent
-NOMINAL_EA_R22_si  = _gas_nom.reaction(IDX_R22).rate.low_rate.activation_energy
-NOMINAL_EA_R22_cal = mol_units.convert_activation_energy_to(
-    f"{NOMINAL_EA_R22_si} J/kmol", "cal / mol")
-NOMINAL_A_R26      = _gas_nom.reaction(IDX_R26).rate.pre_exponential_factor
-NOMINAL_B_R26      = _gas_nom.reaction(IDX_R26).rate.temperature_exponent
-NOMINAL_EA_R26_si  = _gas_nom.reaction(IDX_R26).rate.activation_energy
-NOMINAL_EA_R26_cal = mol_units.convert_activation_energy_to(
-    f"{NOMINAL_EA_R26_si} J/kmol", "cal / mol")
+NOMINAL_A_R1      = _gas_nom.reaction(IDX_R1).rate.low_rate.pre_exponential_factor
+NOMINAL_B_R1      = _gas_nom.reaction(IDX_R1).rate.low_rate.temperature_exponent
+NOMINAL_EA_R1_si  = _gas_nom.reaction(IDX_R1).rate.low_rate.activation_energy
+NOMINAL_EA_R1_cal = mol_units.convert_activation_energy_to(
+    f"{NOMINAL_EA_R1_si} J/kmol", "cal / mol")
+NOMINAL_A_R2      = _gas_nom.reaction(IDX_R2).rate.pre_exponential_factor
+NOMINAL_B_R2      = _gas_nom.reaction(IDX_R2).rate.temperature_exponent
+NOMINAL_EA_R2_si  = _gas_nom.reaction(IDX_R2).rate.activation_energy
+NOMINAL_EA_R2_cal = mol_units.convert_activation_energy_to(
+    f"{NOMINAL_EA_R2_si} J/kmol", "cal / mol")
 del _gas_nom
 
-print(f'R22 (k1): A={NOMINAL_A_R22:.3e}  Ea={NOMINAL_EA_R22_cal:.0f} cal/mol')
-print(f'R26 (k2): A={NOMINAL_A_R26:.3e}  Ea={NOMINAL_EA_R26_cal:.0f} cal/mol')
+print(f'R1 (k1): A={NOMINAL_A_R1:.3e}  Ea={NOMINAL_EA_R1_cal:.0f} cal/mol')
+print(f'R2 (k2): A={NOMINAL_A_R2:.3e}  Ea={NOMINAL_EA_R2_cal:.0f} cal/mol')
 
 # ── Parameter normalization (keep identical to the H2O surrogate) ─────────────
 
-LN_F        = 3        # A = A0 * exp(x * LN_F);  see NOTE 1
+LN_F        = np.log(10)        # A = A0 * exp(x * LN_F);  see NOTE 1
 SIGMA_E     = 5000.0    # Ea(cal/mol) = Ea0 + x * SIGMA_E
-PARAM_NAMES = ['lnA_R22', 'Ea_R22', 'lnA_R26', 'Ea_R26']
+PARAM_NAMES = ['lnA_R1', 'Ea_R1', 'lnA_R2', 'Ea_R2']
 INPUT_DIM   = 4
 
 # ── Multi-scale Sobol sampling ────────────────────────────────────────────────
@@ -99,7 +97,7 @@ T_FINE  = np.linspace(DT_FINE, DT_FINE * N_FINE, N_FINE)
 
 # ── NN / training hyper-parameters ────────────────────────────────────────────
 
-HIDDEN_DIM     = 16   
+HIDDEN_DIM     = 16
 lr_init        = 0.03
 TRAIN_FRAC     = 0.80
 VAL_FRAC       = 0.10
@@ -114,12 +112,13 @@ wd_min, wd_max = 1e-8, 1e-4
 wd_gap_high    = 1.10
 wd_gap_low     = 1.02
 
-CHECKPOINT_PATH = 'ckpt_1192k_oh_train.pt'
-RESULT_PATH     = 'result_1192k_oh_train.pt'
+CHECKPOINT_PATH = 'ckpt_1192k_oh_train_S.pt'
+RESULT_PATH     = 'result_1192k_oh_train_S.pt'
 SIGMA_REQS      = {0.1: (0.01, 0.02), 0.3: (0.02, 0.05), 0.5: (0.03, 0.10)}
 LOG_EPS         = 1e-12
 
-TARGET_LABELS = ['rise (50% up)', '[OH]_peak', 'OH @ 2·t_peak', 'OH @ 5·t_peak', 'OH @ 0.1ms']
+N_TARGETS       = 3  # rise, peak, mid-decay (as per design notes)
+TARGET_LABELS   = ['rise (50% up)', 'peak', 'mid-decay (33% down)']
 
 
 # ── Nominal OH profile & effective target-time selection ──────────────────────
@@ -137,51 +136,86 @@ def run_nominal_oh():
     return profile
 
 
-def find_oh_targets(profile, t_sim):
-    """Return 5 fixed nominal times for the target probes."""
-    i_peak  = int(np.argmax(profile))
-    oh_peak = float(profile[i_peak])
-    oh_init = float(profile[0])
-    t_peak  = float(t_sim[i_peak])
-    rise_gap = oh_peak - oh_init
+# def find_oh_targets(profile, t_sim):
+#     """Return 6 fixed nominal times for the target probes."""
+#     i_peak  = int(np.argmax(profile))
+#     oh_peak = float(profile[i_peak])
+#     oh_init = float(profile[0])
+#     t_peak  = float(t_sim[i_peak])
+#     rise_gap = oh_peak - oh_init
 
-    i1 = int(np.argmin(np.abs(profile[:i_peak] - (oh_init + 0.50 * rise_gap))))
+#     i1 = int(np.argmin(np.abs(profile[:i_peak] - (oh_init + 0.50 * rise_gap))))
 
-    times = np.array([
-        t_sim[i1],    # P1: rise (50%)
-        t_peak,       # P2: [OH]_peak
-        2.0 * t_peak, # P3: OH @ 2·t_peak
-        5.0 * t_peak, # P4: OH @ 5·t_peak
-        1.0e-4,       # P5: OH @ 0.1ms (late decay)
-    ])
-    dt_guard = (t_sim[1] - t_sim[0]) * 2
-    for k in range(1, len(times)):
-        if times[k] <= times[k - 1]:
-            times[k] = times[k - 1] + dt_guard
-    return times
+#     times = np.array([
+#         t_sim[i1],    # P1: rise (50%)
+#         t_peak,       # P2: [OH]_peak
+#         2.0 * t_peak, # P3: OH @ 2.0·t_peak
+#         1e-4,         # P4: 0.1ms
+#         8e-4          # P5: 0.8ms
+#     ])
+#     dt_guard = (t_sim[1] - t_sim[0]) * 2
+#     for k in range(1, len(times)):
+#         if times[k] <= times[k - 1]:
+#             times[k] = times[k - 1] + dt_guard
+#     return times
 
+def select_targets(t_grid, OH_nom, S, n, oh_min_ppm=30, sigma_log=0.05):
+    # S: (Nt,2) normalized log-sensitivities [S_k1, S_k2]
+    # D-optimality: maximize det(Sᵀ S) over selected time points
+    cand = np.where(OH_nom*1e6 >= oh_min_ppm)[0]        # drop unmeasurable/unfittable times
+    chosen = [cand[np.argmax(np.linalg.norm(S[cand], axis=1))]]   # seed: strongest sensitivity
+    for _ in range(n-1):
+        det = [ (np.linalg.det(S[chosen+[c]].T @ S[chosen+[c]]) if c not in chosen else -1)
+                for c in cand ]
+        chosen.append(cand[int(np.argmax(det))])
+    return sorted(chosen)   # maximizes det(Sᵀ S)
 
 print('\nRunning nominal OH profile (1 ms, const-P) ...')
 _nom  = run_nominal_oh()
 _i_pk = int(np.argmax(_nom))
 print(f'  OH_peak = {_nom[_i_pk]*1e6:.1f} ppm  at t = {T_FINE[_i_pk]*1e3:.4f} ms')
 
-TARGET_TIMES = find_oh_targets(_nom, T_FINE)
-N_TARGETS    = len(TARGET_TIMES)
+# TARGET_TIMES = find_oh_targets(_nom, T_FINE)
+# N_TARGETS    = len(TARGET_TIMES)
 
 
-print('\nSelected OH target probes (nominal):')
-_nom_vals = [
-    np.interp(TARGET_TIMES[0], T_FINE, _nom) * 1e6,   # rise OH [ppm]
-    _nom[_i_pk] * 1e6,                                 # [OH]_peak [ppm]
-    np.interp(TARGET_TIMES[2], T_FINE, _nom) * 1e6,   # OH @ 2·t_peak [ppm]
-    np.interp(TARGET_TIMES[3], T_FINE, _nom) * 1e6,   # OH @ 5·t_peak [ppm]
-    np.interp(TARGET_TIMES[4], T_FINE, _nom) * 1e6,   # OH @ 0.1ms [ppm]
-]
-_units = ['ppm', 'ppm', 'ppm', 'ppm', 'ppm']
-for j, (lbl, val, unit) in enumerate(zip(TARGET_LABELS, _nom_vals, _units)):
-    print(f'  {j+1}. {lbl:<22}  nominal ~ {val:.2f} {unit}')
+# print('\nSelected OH target probes (nominal):')
+# _nom_vals = [
+#     np.interp(TARGET_TIMES[0], T_FINE, _nom) * 1e6,   # rise OH [ppm]
+#     _nom[_i_pk] * 1e6,                                 # [OH]_peak [ppm]
+#     np.interp(TARGET_TIMES[2], T_FINE, _nom) * 1e6,   # OH @ 2.0·t_peak [ppm]
+#     np.interp(TARGET_TIMES[3], T_FINE, _nom) * 1e6,   # OH @ 0.1ms [ppm]
+#     np.interp(TARGET_TIMES[4], T_FINE, _nom) * 1e6,   # OH @ 0.8ms [ppm]
+# ]
+# _units = ['ppm', 'ppm', 'ppm', 'ppm', 'ppm']
+# for j, (lbl, val, unit) in enumerate(zip(TARGET_LABELS, _nom_vals, _units)):
+#     print(f'  {j+1}. {lbl:<22}  nominal ~ {val:.2f} {unit}')
 
+# --- put select_targets() next to find_oh_targets() (before it's called) ---
+# --- then, right after:  _nom = run_nominal_oh()  (line ~168, replacing the find_oh_targets line) ---
+def _oh_profile(mult=None):
+    g = ct.Solution(YAML_FILE)
+    if mult:
+        i, f = mult; r = g.reaction(i)
+        if i == IDX_R1:
+            lr = r.rate.low_rate
+            r.rate.low_rate = ct.Arrhenius(lr.pre_exponential_factor*f, lr.temperature_exponent, lr.activation_energy)
+        else:
+            r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f, r.rate.temperature_exponent, r.rate.activation_energy)
+        g.modify_reaction(i, r)
+    g.TPX = T_INITIAL, P_INITIAL, INITIAL_X
+    rr = ct.IdealGasConstPressureReactor(g, energy='on'); net = ct.ReactorNet([rr]); oh = g.species_index('OH')
+    out = np.empty(N_FINE)
+    for k in range(N_FINE): net.advance(T_FINE[k]); out[k] = rr.thermo.X[oh]
+    return out
+
+d = 0.01
+S_k1 = (_oh_profile((IDX_R1, 1+d)) - _nom) / _nom / d
+S_k2 = (_oh_profile((IDX_R2, 1+d)) - _nom) / _nom / d
+S    = np.vstack([S_k1, S_k2]).T
+
+idx = select_targets(T_FINE, _nom, S, N_TARGETS, oh_min_ppm=30)   # returns indices into T_FINE
+TARGET_TIMES = T_FINE[idx]
 
 # ── Sobol sampling ─────────────────────────────────────────────────────────────
 
@@ -201,23 +235,23 @@ def multiscale_sobol(n_total, sigmas, ratios, d=INPUT_DIM, seed=SEED):
 X_samples, L_samples = multiscale_sobol(TOTAL_SAMPLES, SIGMA_LIST, RATIO_LIST)
 
 
-# ── Cantera simulation — 5 target probes (rise/OH_peak/2×t_peak/5×t_peak/0.1ms) ──────
+# ── Cantera simulation — 5 target probes (rise/OH_peak/2×t_peak/0.1ms/0.8ms) ──────
 
 def run_single(x_vec):
     try:
         gas = ct.Solution(YAML_FILE)
-        # R22 (k1) — falloff low-rate
-        new_A_R22  = NOMINAL_A_R22 * np.exp(x_vec[0] * LN_F)
-        new_Ea_R22 = (NOMINAL_EA_R22_cal + x_vec[1] * SIGMA_E) * 4184.0
-        rxn22 = gas.reaction(IDX_R22)
-        rxn22.rate.low_rate = ct.Arrhenius(new_A_R22, NOMINAL_B_R22, new_Ea_R22)
-        gas.modify_reaction(IDX_R22, rxn22)
-        # R26 (k2) — simple Arrhenius
-        new_A_R26  = NOMINAL_A_R26 * np.exp(x_vec[2] * LN_F)
-        new_Ea_R26 = (NOMINAL_EA_R26_cal + x_vec[3] * SIGMA_E) * 4184.0
-        rxn26 = gas.reaction(IDX_R26)
-        rxn26.rate = ct.Arrhenius(new_A_R26, NOMINAL_B_R26, new_Ea_R26)
-        gas.modify_reaction(IDX_R26, rxn26)
+        # R1 (k1) — falloff low-rate
+        new_A_R1  = NOMINAL_A_R1 * np.exp(x_vec[0] * LN_F)
+        new_Ea_R1 = (NOMINAL_EA_R1_cal + x_vec[1] * SIGMA_E) * 4184.0
+        rxn22 = gas.reaction(IDX_R1)
+        rxn22.rate.low_rate = ct.Arrhenius(new_A_R1, NOMINAL_B_R1, new_Ea_R1)
+        gas.modify_reaction(IDX_R1, rxn22)
+        # R2 (k2) — simple Arrhenius
+        new_A_R2  = NOMINAL_A_R2 * np.exp(x_vec[2] * LN_F)
+        new_Ea_R2 = (NOMINAL_EA_R2_cal + x_vec[3] * SIGMA_E) * 4184.0
+        rxn26 = gas.reaction(IDX_R2)
+        rxn26.rate = ct.Arrhenius(new_A_R2, NOMINAL_B_R2, new_Ea_R2)
+        gas.modify_reaction(IDX_R2, rxn26)
 
         gas.TPX = T_INITIAL, P_INITIAL, INITIAL_X
         reactor = ct.IdealGasConstPressureReactor(gas, energy='on')
@@ -341,7 +375,7 @@ def _pass(loader, train_mode):
         total += loss.item() * len(xb)
     return total / len(loader.dataset)
 
-print('\nTraining (1192 K OH, 5-pt: rise/OH_peak/2×t_peak/5×t_peak/0.5ms, ReLU) ...')
+print('\nTraining (1192 K OH, 3-pt: rise/peak/mid-decay, ReLU) ...')
 t0 = time.time()
 for epoch in range(EPOCHS):
     model.train()
@@ -385,7 +419,7 @@ with torch.no_grad():
 rel_err = np.abs(Y_pred - Y_true) / (np.abs(Y_true) + 1e-30)
 
 print(f'\n{"="*72}')
-print('  1192 K OH — 5-pt (rise/OH_peak/2×t_peak/5×t_peak/0.5ms)  |  Zhang Table 1')
+print('  1192 K OH — 3-pt (rise/peak/mid-decay)  |  Zhang Table 1')
 print(f'{"="*72}')
 all_pass = True
 for k, sigma in enumerate(SIGMA_LIST, 1):

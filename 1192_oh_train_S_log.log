@@ -1,0 +1,60 @@
+R1 (k1): A=2.490e+21  Ea=48749 cal/mol
+R2 (k2): A=7.590e+10  Ea=7270 cal/mol
+
+Running nominal OH profile (1 ms, const-P) ...
+  OH_peak = 77.5 ppm  at t = 0.0126 ms
+
+Starting fresh: 40000 simulations
+  2000/40000  190.0 sim/s  failed=0
+  4000/40000  189.0 sim/s  failed=0
+  6000/40000  188.3 sim/s  failed=0
+  8000/40000  187.5 sim/s  failed=0
+  10000/40000  186.7 sim/s  failed=0
+  12000/40000  186.0 sim/s  failed=0
+  14000/40000  185.2 sim/s  failed=0
+  16000/40000  184.4 sim/s  failed=0
+  18000/40000  183.6 sim/s  failed=0
+  20000/40000  182.8 sim/s  failed=0
+  22000/40000  182.2 sim/s  failed=0
+  24000/40000  181.4 sim/s  failed=0
+  26000/40000  180.8 sim/s  failed=0
+  28000/40000  180.3 sim/s  failed=0
+  30000/40000  179.7 sim/s  failed=0
+  32000/40000  179.2 sim/s  failed=0
+  34000/40000  178.6 sim/s  failed=0
+  36000/40000  178.1 sim/s  failed=0
+  38000/40000  177.6 sim/s  failed=0
+  40000/40000  177.1 sim/s  failed=0
+
+Shapes: X=(40000, 4)  Y=(40000, 3)  (failed=0)
+Split: train=32000  val=4000  test=4000
+
+Training (1192 K OH, 3-pt: rise/peak/mid-decay, ReLU) ...
+  ep     1 | train 1.1272e+04 | val 3.4480e+01 | gap 0.003 | wd 5.0e-07 | lr 3.0e-02
+  ep   500 | train 5.4823e-02 | val 5.4448e-02 | gap 0.993 | wd 1.0e-08 | lr 3.0e-02
+  ep  1000 | train 2.9180e-02 | val 3.4618e-02 | gap 1.186 | wd 2.0e-08 | lr 1.5e-02
+  ep  1500 | train 2.8092e-02 | val 3.6510e-02 | gap 1.300 | wd 4.0e-08 | lr 1.5e-02
+  ep  2000 | train 2.3417e-02 | val 2.3577e-02 | gap 1.007 | wd 1.0e-08 | lr 7.5e-03
+  ep  2500 | train 2.2646e-02 | val 2.2955e-02 | gap 1.014 | wd 1.0e-08 | lr 1.9e-03
+  ep  3000 | train 2.2411e-02 | val 2.2806e-02 | gap 1.018 | wd 1.0e-08 | lr 9.4e-04
+  ep  3500 | train 2.2288e-02 | val 2.2694e-02 | gap 1.018 | wd 1.0e-08 | lr 2.3e-04
+  ep  4000 | train 2.2214e-02 | val 2.2668e-02 | gap 1.020 | wd 1.0e-08 | lr 1.2e-04
+  ep  4500 | train 2.2190e-02 | val 2.2657e-02 | gap 1.021 | wd 1.0e-08 | lr 1.2e-04
+  ep  5000 | train 2.2150e-02 | val 2.2635e-02 | gap 1.022 | wd 1.0e-08 | lr 5.9e-05
+Done in 25.0 min.  Best val: 2.2635e-02
+
+========================================================================
+  1192 K OH — 3-pt (rise/peak/mid-decay)  |  Zhang Table 1
+========================================================================
+  Set 1  sigma=0.1  N=661    mean=  1.05% (<= 1%)  p95=  3.31% (<= 2%)  FAIL
+  Set 2  sigma=0.3  N=659    mean=  1.55% (<= 2%)  p95=  5.17% (<= 5%)  FAIL
+  Set 3  sigma=0.5  N=2680   mean=  2.67% (<= 3%)  p95=  9.16% (<= 10%)  PASS
+========================================================================
+does NOT meet all Zhang Table 1 requirements.
+
+Per-target mean relative error (%):
+  1. rise (50% up)          t=0.0021 ms   err=0.97%
+  2. peak                   t=0.0902 ms   err=1.83%
+  3. mid-decay (33% down)   t=0.6324 ms   err=3.86%
+
+Saved: result_1192k_oh_train_S.pt

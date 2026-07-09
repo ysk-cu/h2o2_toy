@@ -9,13 +9,13 @@
 #             T = 1192 K, P = 1.95 atm
 #
 # Workflow:
-#   1. Build NN surrogate: (lnA_R22, Ea_R22, lnA_R26, Ea_R26) → H2O(t) at 5 times
+#   1. Build NN surrogate: (lnA_R1, Ea_R1, lnA_R2, Ea_R2) → H2O(t) at 5 times
 #   2. Evaluate H2O surrogate accuracy (Zhang Table 1)
 #   3. For test samples: optimize x to fit observed H2O → run Cantera for OH
 #   4. Report OH prediction accuracy from the recovered parameters
 #
 # H2O is monotonically increasing (no sharp peak timing problem) → easy to surrogate.
-# Inputs:  x[0]=lnA_R22  x[1]=Ea_R22  x[2]=lnA_R26  x[3]=Ea_R26
+# Inputs:  x[0]=lnA_R1  x[1]=Ea_R1  x[2]=lnA_R2  x[3]=Ea_R2
 
 import os, time, copy
 import cantera as ct
@@ -38,28 +38,28 @@ mol_units = ct.UnitSystem({
     "quantity": "mol", "pressure": "dyn / cm^2", "energy": "erg",
     "temperature": "K", "current": "A", "activation-energy": "cal / mol"})
 
-IDX_R22 = 21
-IDX_R26 = 25
+IDX_R1 = 21
+IDX_R2 = 25
 
 _gas_nom = ct.Solution(YAML_FILE)
-NOMINAL_A_R22      = _gas_nom.reaction(IDX_R22).rate.low_rate.pre_exponential_factor
-NOMINAL_B_R22      = _gas_nom.reaction(IDX_R22).rate.low_rate.temperature_exponent
-NOMINAL_EA_R22_si  = _gas_nom.reaction(IDX_R22).rate.low_rate.activation_energy
-NOMINAL_EA_R22_cal = mol_units.convert_activation_energy_to(
-    f"{NOMINAL_EA_R22_si} J/kmol", "cal / mol")
-NOMINAL_A_R26      = _gas_nom.reaction(IDX_R26).rate.pre_exponential_factor
-NOMINAL_B_R26      = _gas_nom.reaction(IDX_R26).rate.temperature_exponent
-NOMINAL_EA_R26_si  = _gas_nom.reaction(IDX_R26).rate.activation_energy
-NOMINAL_EA_R26_cal = mol_units.convert_activation_energy_to(
-    f"{NOMINAL_EA_R26_si} J/kmol", "cal / mol")
+NOMINAL_A_R1      = _gas_nom.reaction(IDX_R1).rate.low_rate.pre_exponential_factor
+NOMINAL_B_R1      = _gas_nom.reaction(IDX_R1).rate.low_rate.temperature_exponent
+NOMINAL_EA_R1_si  = _gas_nom.reaction(IDX_R1).rate.low_rate.activation_energy
+NOMINAL_EA_R1_cal = mol_units.convert_activation_energy_to(
+    f"{NOMINAL_EA_R1_si} J/kmol", "cal / mol")
+NOMINAL_A_R2      = _gas_nom.reaction(IDX_R2).rate.pre_exponential_factor
+NOMINAL_B_R2      = _gas_nom.reaction(IDX_R2).rate.temperature_exponent
+NOMINAL_EA_R2_si  = _gas_nom.reaction(IDX_R2).rate.activation_energy
+NOMINAL_EA_R2_cal = mol_units.convert_activation_energy_to(
+    f"{NOMINAL_EA_R2_si} J/kmol", "cal / mol")
 del _gas_nom
 
-print(f'R22: A={NOMINAL_A_R22:.3e}  Ea={NOMINAL_EA_R22_cal:.0f} cal/mol')
-print(f'R26: A={NOMINAL_A_R26:.3e}  Ea={NOMINAL_EA_R26_cal:.0f} cal/mol')
+print(f'R1: A={NOMINAL_A_R1:.3e}  Ea={NOMINAL_EA_R1_cal:.0f} cal/mol')
+print(f'R2: A={NOMINAL_A_R2:.3e}  Ea={NOMINAL_EA_R2_cal:.0f} cal/mol')
 
-LN_F        = 3
+LN_F        = np.log(10)
 SIGMA_E     = 5000.0
-PARAM_NAMES = ['lnA_R22', 'Ea_R22', 'lnA_R26', 'Ea_R26']
+PARAM_NAMES = ['lnA_R1', 'Ea_R1', 'lnA_R2', 'Ea_R2']
 INPUT_DIM   = 4
 
 TOTAL_SAMPLES = 40000
@@ -99,10 +99,12 @@ wd_min, wd_max = 1e-8, 1e-4
 wd_gap_high    = 1.10
 wd_gap_low     = 1.02
 
-CHECKPOINT_PATH = 'ckpt_1192k_h2o_train_3pts.pt'
-RESULT_PATH     = 'result_1192k_h2o_train_3pts.pt'
+CHECKPOINT_PATH = 'ckpt_1192k_h2o_train_S.pt'
+RESULT_PATH     = 'result_1192k_h2o_train_S.pt'
 SIGMA_REQS      = {0.1: (0.01, 0.02), 0.3: (0.02, 0.05), 0.5: (0.03, 0.10)}
 LOG_EPS         = 1e-12
+
+N_TARGETS = 3  # rise, plateau points chosen by sensitivity analysis
 
 
 # ── Auto-select H2O target times from nominal profile ─────────────────────────
@@ -126,23 +128,134 @@ _h2o_0   = float(_nom_h2o[0])
 _h2o_inf = float(_nom_h2o[-200:].mean())
 print(f'  H2O initial = {_h2o_0*1e6:.1f} ppm   H2O plateau = {_h2o_inf*1e6:.1f} ppm')
 
+
+# ── H2O sensitivity-based target selection (pure-k1 probe) ────────────────────
+# H2O sees essentially only k1 (S_k2 ~ 0), so the OH det(S^T W S) objective
+# degenerates. We place a few points across the high-S_k1 rise with a minimum
+# spacing, and keep one plateau point as a stoichiometry/yield consistency anchor.
+
+def _h2o_profile(mult=None):
+    g = ct.Solution(YAML_FILE)
+    if mult:
+        i, f = mult; r = g.reaction(i)
+        if i == IDX_R1:
+            lr = r.rate.low_rate
+            r.rate.low_rate = ct.Arrhenius(lr.pre_exponential_factor*f,
+                                           lr.temperature_exponent, lr.activation_energy)
+        else:
+            r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f,
+                                  r.rate.temperature_exponent, r.rate.activation_energy)
+        g.modify_reaction(i, r)
+    g.TPX = T_INITIAL, P_INITIAL, INITIAL_X
+    rr = ct.IdealGasConstPressureReactor(g, energy='on')
+    net = ct.ReactorNet([rr]); h2o = g.species_index('H2O')
+    out = np.empty(N_STEPS)
+    for k in range(N_STEPS):
+        net.advance(T_SIM[k]); out[k] = rr.thermo.X[h2o]
+    return out
+
+
+# ── OLD: k1-only target selection (commented out) ──────────────────────────
+# def select_h2o_targets_k1_only(t_grid, H2O_nom, S_k1, n_rise, min_dt=0.03e-3, yield_anchor=True):
+#     """
+#     n_rise       : number of k1-informative points placed on the rise
+#     min_dt       : minimum spacing (s) so points don't collapse onto the S_k1 peak
+#     yield_anchor : if True, add one point near the plateau (~95% of rise) as a
+#                    stoichiometry check (low k1 info, but harmless and useful)
+#     Returns sorted indices into t_grid.
+#     """
+#     chosen = []
+#     for c in np.argsort(-np.abs(S_k1)):                     # most k1-informative first
+#         if all(abs(t_grid[c] - t_grid[j]) >= min_dt for j in chosen):
+#             chosen.append(int(c))
+#         if len(chosen) == n_rise:
+#             break
+#     if yield_anchor:
+#         frac = (H2O_nom - H2O_nom[0]) / (H2O_nom[-1] - H2O_nom[0])
+#         anchor = int(np.argmin(np.abs(frac - 0.95)))
+#         if anchor not in chosen:
+#             chosen.append(anchor)
+#     return sorted(chosen)
+
+# ── NEW: k1+k2 combined target selection (for joint compatibility) ──────────
+def select_h2o_targets(t_grid, H2O_nom, S_k1, S_k2, n_targets, min_dt=0.03e-3):
+    """
+    NEW: Uses both k1 and k2 sensitivities for target selection.
+    This makes H2O targets compatible with joint OH+H2O inference where k1/k2 are coupled.
+
+    Args:
+        t_grid     : time grid
+        H2O_nom    : nominal H2O profile
+        S_k1       : d(log H2O)/d(lnA_R1)
+        S_k2       : d(log H2O)/d(lnA_R2)
+        n_targets  : total number of targets to select
+        min_dt     : minimum spacing between targets
+
+    Returns sorted indices into t_grid.
+    """
+    S = np.vstack([S_k1, S_k2]).T  # shape: (N, 2) — combined sensitivity matrix
+
+    # Candidates: use H2O threshold like before
+    cand = np.arange(len(t_grid))
+
+    # Seed: strongest combined sensitivity
+    norm_S = np.linalg.norm(S[cand], axis=1)
+    chosen = [cand[np.argmax(norm_S)]]
+
+    # Greedily add targets maximizing det(S^T S) with spacing constraint
+    for _ in range(n_targets - 1):
+        best_det = -np.inf
+        best_idx = None
+
+        for c in cand:
+            if c not in chosen and all(abs(t_grid[c] - t_grid[j]) >= min_dt for j in chosen):
+                S_test = S[chosen + [c]]
+                if S_test.shape[0] >= 2:
+                    det_val = np.linalg.det(S_test.T @ S_test)
+                    if det_val > best_det:
+                        best_det = det_val
+                        best_idx = c
+
+        if best_idx is not None:
+            chosen.append(best_idx)
+
+    return sorted(chosen)
 # 5 target times at 20 / 40 / 60 / 80 / 95% of the H2O rise
 # _fracs   = np.array([0.20, 0.40, 0.60, 0.80, 0.95])
 # 3 target times at 20 / 60 / 95% of the H2O rise
-_fracs   = np.array([0.20, 0.60, 0.95])
-_targets = _h2o_0 + _fracs * (_h2o_inf - _h2o_0)
-TARGET_TIMES = np.array([
-    T_SIM[np.argmax(_nom_h2o >= xt)] if np.any(_nom_h2o >= xt)
-    else T_SIM[-1]
-    for xt in _targets
-])
-N_TARGETS = len(TARGET_TIMES)
+# _fracs   = np.array([0.20, 0.60, 0.95])
+# _targets = _h2o_0 + _fracs * (_h2o_inf - _h2o_0)
+# TARGET_TIMES = np.array([
+#     T_SIM[np.argmax(_nom_h2o >= xt)] if np.any(_nom_h2o >= xt)
+#     else T_SIM[-1]
+#     for xt in _targets
+# ])
+# N_TARGETS = len(TARGET_TIMES)
 
-print('\nH2O target times:')
-for j, (f, t) in enumerate(zip(_fracs, TARGET_TIMES)):
-    h2o_ppm = np.interp(t, T_SIM, _nom_h2o) * 1e6
-    print(f'  {j+1}. {int(f*100):2d}% rise  t = {t*1e3:.3f} ms   H2O ≈ {h2o_ppm:.1f} ppm')
+# print('\nH2O target times:')
+# for j, (f, t) in enumerate(zip(_fracs, TARGET_TIMES)):
+#     h2o_ppm = np.interp(t, T_SIM, _nom_h2o) * 1e6
+#     print(f'  {j+1}. {int(f*100):2d}% rise  t = {t*1e3:.3f} ms   H2O ≈ {h2o_ppm:.1f} ppm')
 
+_h2o_nom = _h2o_profile()
+d = 0.01
+S_k1 = (_h2o_profile((IDX_R1, 1 + d)) - _h2o_nom) / _h2o_nom / d
+S_k2 = (_h2o_profile((IDX_R2, 1 + d)) - _h2o_nom) / _h2o_nom / d
+# NEW: Include S_k2 even though H2O is mostly k1-sensitive, for joint compatibility
+
+# ── OLD: k1-only selection (commented) ──────────────────────────────────────
+# idx = select_h2o_targets_k1_only(T_SIM, _h2o_nom, S_k1,
+#                          n_rise=N_TARGETS - 1,   # leave one slot for the anchor
+#                          min_dt=0.03e-3, yield_anchor=True)
+
+# ── NEW: k1+k2 joint selection ─────────────────────────────────────────────
+idx = select_h2o_targets(T_SIM, _h2o_nom, S_k1, S_k2,
+                         n_targets=N_TARGETS, min_dt=0.03e-3)
+TARGET_TIMES = T_SIM[idx]
+
+print('\nSelected H2O target times (k1+k2 combined sensitivity):')
+for j in idx:
+    print(f"  t={T_SIM[j]*1e3:6.3f} ms   H2O={_h2o_nom[j]*1e6:5.0f} ppm   S_k1={S_k1[j]:+.3f}  S_k2={S_k2[j]:+.3f}")
 
 # ── Sobol sampling ─────────────────────────────────────────────────────────────
 
@@ -169,16 +282,16 @@ X_samples, L_samples = multiscale_sobol(TOTAL_SAMPLES, SIGMA_LIST, RATIO_LIST)
 
 def _perturb_gas(x_vec):
     local_gas = ct.Solution(YAML_FILE)
-    new_A_R22  = NOMINAL_A_R22 * np.exp(x_vec[0] * LN_F)
-    new_Ea_R22 = (NOMINAL_EA_R22_cal + x_vec[1] * SIGMA_E) * 4184.0
-    rxn22 = local_gas.reaction(IDX_R22)
-    rxn22.rate.low_rate = ct.Arrhenius(new_A_R22, NOMINAL_B_R22, new_Ea_R22)
-    local_gas.modify_reaction(IDX_R22, rxn22)
-    new_A_R26  = NOMINAL_A_R26 * np.exp(x_vec[2] * LN_F)
-    new_Ea_R26 = (NOMINAL_EA_R26_cal + x_vec[3] * SIGMA_E) * 4184.0
-    rxn26 = local_gas.reaction(IDX_R26)
-    rxn26.rate = ct.Arrhenius(new_A_R26, NOMINAL_B_R26, new_Ea_R26)
-    local_gas.modify_reaction(IDX_R26, rxn26)
+    new_A_R1  = NOMINAL_A_R1 * np.exp(x_vec[0] * LN_F)
+    new_Ea_R1 = (NOMINAL_EA_R1_cal + x_vec[1] * SIGMA_E) * 4184.0
+    rxn22 = local_gas.reaction(IDX_R1)
+    rxn22.rate.low_rate = ct.Arrhenius(new_A_R1, NOMINAL_B_R1, new_Ea_R1)
+    local_gas.modify_reaction(IDX_R1, rxn22)
+    new_A_R2  = NOMINAL_A_R2 * np.exp(x_vec[2] * LN_F)
+    new_Ea_R2 = (NOMINAL_EA_R2_cal + x_vec[3] * SIGMA_E) * 4184.0
+    rxn26 = local_gas.reaction(IDX_R2)
+    rxn26.rate = ct.Arrhenius(new_A_R2, NOMINAL_B_R2, new_Ea_R2)
+    local_gas.modify_reaction(IDX_R2, rxn26)
     return local_gas
 
 
@@ -388,8 +501,10 @@ print(f'{"="*70}')
 print('MEETS' if all_pass else 'does NOT meet', 'all Zhang Table 1 requirements.')
 
 print('\nPer-H2O-target mean relative error (%):')
-for j, (f, t) in enumerate(zip(_fracs, TARGET_TIMES)):
-    print(f'  {j+1}. {int(f*100):2d}% rise  t={t*1e3:.3f} ms   '
+_h2o_rise = _h2o_nom[-1] - _h2o_nom[0]
+for j, t in enumerate(TARGET_TIMES):
+    frac = (np.interp(t, T_SIM, _h2o_nom) - _h2o_nom[0]) / _h2o_rise
+    print(f'  {j+1}. {frac*100:5.1f}% rise  t={t*1e3:.3f} ms   '
           f'err={rel_err_h2o[:, j].mean()*100:.2f}%')
 
 

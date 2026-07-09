@@ -1,0 +1,67 @@
+R1: A=2.490e+21  Ea=48749 cal/mol
+R2: A=7.590e+10  Ea=7270 cal/mol
+
+Running nominal H2O profile (1 ms) ...
+  H2O initial = 1365.3 ppm   H2O plateau = 3555.1 ppm
+
+Selected H2O target times (sensitivity-based):
+  t= 0.093 ms   H2O= 2461 ppm   S_k1=+0.293
+  t= 0.123 ms   H2O= 2695 ppm   S_k1=+0.283
+  t= 0.376 ms   H2O= 3448 ppm   S_k1=+0.080
+
+Starting fresh: 40000 simulations
+  2000/40000  121.1 sim/s  failed=0
+  4000/40000  120.9 sim/s  failed=0
+  6000/40000  120.5 sim/s  failed=0
+  8000/40000  120.2 sim/s  failed=0
+  10000/40000  119.9 sim/s  failed=0
+  12000/40000  119.6 sim/s  failed=0
+  14000/40000  119.3 sim/s  failed=0
+  16000/40000  119.0 sim/s  failed=0
+  18000/40000  118.7 sim/s  failed=0
+  20000/40000  118.4 sim/s  failed=0
+  22000/40000  118.2 sim/s  failed=0
+  24000/40000  117.9 sim/s  failed=0
+  26000/40000  117.2 sim/s  failed=0
+  28000/40000  116.6 sim/s  failed=0
+  30000/40000  116.0 sim/s  failed=0
+  32000/40000  115.4 sim/s  failed=0
+  34000/40000  114.9 sim/s  failed=0
+  36000/40000  114.4 sim/s  failed=0
+  38000/40000  113.9 sim/s  failed=0
+  40000/40000  113.5 sim/s  failed=0
+
+Sample generation: 354.2 s  (5.90 min)  112.9 sim/s  failed=0
+
+Shapes: X=(40000, 4)  Y=(40000, 3)  (failed=0)
+Split: train=32000  val=4000  test=4000
+
+Training (1192K H2O surrogate, 1 ms, ReLU, relative error loss) ...
+  ep     1 | train 7.3178e+01 | val 7.8236e-01 | gap 0.011 | wd 5.0e-07 | lr 3.0e-02
+  ep   500 | train 1.2587e-02 | val 8.0844e-03 | gap 0.642 | wd 1.0e-08 | lr 1.5e-02
+  ep  1000 | train 6.8639e-03 | val 8.4285e-03 | gap 1.228 | wd 1.6e-07 | lr 7.5e-03
+  ep  1500 | train 2.7788e-03 | val 2.8924e-03 | gap 1.041 | wd 1.0e-08 | lr 1.9e-03
+  ep  2000 | train 2.6137e-03 | val 2.5816e-03 | gap 0.988 | wd 1.0e-08 | lr 9.4e-04
+  ep  2500 | train 2.5647e-03 | val 2.5398e-03 | gap 0.990 | wd 1.0e-08 | lr 9.4e-04
+  ep  3000 | train 2.5343e-03 | val 2.6526e-03 | gap 1.047 | wd 1.0e-08 | lr 4.7e-04
+  ep  3500 | train 2.5137e-03 | val 2.5060e-03 | gap 0.997 | wd 1.0e-08 | lr 2.3e-04
+  ep  4000 | train 2.5004e-03 | val 2.5065e-03 | gap 1.002 | wd 1.0e-08 | lr 5.9e-05
+  ep  4500 | train 2.4953e-03 | val 2.4958e-03 | gap 1.000 | wd 1.0e-08 | lr 1.5e-05
+  ep  5000 | train 2.4946e-03 | val 2.4953e-03 | gap 1.000 | wd 1.0e-08 | lr 3.7e-06
+Done in 25.2 min.  Best val: 2.4943e-03
+
+======================================================================
+  1192K H2O surrogate  |  Zhang Table 1
+======================================================================
+  Set 1  σ=0.1   N=661    mean=  0.13%  (≤1%)   p95=  0.38%  (≤2%)   PASS
+  Set 2  σ=0.3   N=659    mean=  0.20%  (≤2%)   p95=  0.63%  (≤5%)   PASS
+  Set 3  σ=0.5   N=2680   mean=  0.31%  (≤3%)   p95=  0.89%  (≤10%)   PASS
+======================================================================
+MEETS all Zhang Table 1 requirements.
+
+Per-H2O-target mean relative error (%):
+  1.  50.0% rise  t=0.093 ms   err=0.26%
+  2.  60.7% rise  t=0.123 ms   err=0.26%
+  3.  95.0% rise  t=0.376 ms   err=0.26%
+
+Saved: result_1192k_h2o_train_S.pt
