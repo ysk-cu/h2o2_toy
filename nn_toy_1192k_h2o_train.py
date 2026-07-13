@@ -100,7 +100,7 @@ wd_gap_high    = 1.10
 wd_gap_low     = 1.02
 
 CHECKPOINT_PATH = 'ckpt_1192k_h2o_train_S.pt'
-RESULT_PATH     = 'result_1192k_h2o_train_S.pt'
+RESULT_PATH     = 'result_1192k_h2o_train_S2.pt'
 SIGMA_REQS      = {0.1: (0.01, 0.02), 0.3: (0.02, 0.05), 0.5: (0.03, 0.10)}
 LOG_EPS         = 1e-12
 
