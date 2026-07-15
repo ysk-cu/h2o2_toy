@@ -130,8 +130,8 @@ N_TARGETS       = 3  # rise, peak, mid-decay (as per design notes)
 #     a ~34% structural overshoot (radical-pool chemistry outside k1/k2).
 #     Constraining it forces k2 to absorb structural error and drags k1 up,
 #     which is what degraded the H2O fit below nominal in the integrate run.
-T_MIN_TARGET = 1e-5    # 10 us
-T_MAX_TARGET = 3e-4    # 0.3 ms
+T_MIN_TARGET = 1e-7    # 0.1 us
+T_MAX_TARGET = 1e-4    # 0.1 ms
 
 
 # ── Nominal OH profile & effective target-time selection ──────────────────────
