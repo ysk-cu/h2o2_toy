@@ -1,0 +1,80 @@
+R1 (k1): A=2.490e+21  Ea=48749 cal/mol
+R2 (k2): A=7.590e+10  Ea=7270 cal/mol
+R5 (k5): A=3.340e+01  b=+2.42  Ea=-1930 cal/mol
+
+Running nominal profiles (1 ms, const-P) ...
+  OH_peak = 508.3 ppm  at t = 0.0061 ms
+  OH decays to 50% of peak at t=0.0502 ms; ceiling=0.1000 ms -> T_MAX_TARGET_OH=0.0502 ms
+  H2O initial = 1234.3 ppm   H2O plateau = 3659.5 ppm
+  H2O 95%-rise time = 0.0434 ms -> T_MAX_TARGET_H2O
+
+Computing sensitivities (OH on fine grid, H2O on coarse grid) ...
+
+OH target probes (window 1.0 µs .. 0.0502 ms, independent D-optimal, k1/k2/k5):
+  1. OH D-opt @ 0.0010 ms            OH ~ 210.34 ppm
+  2. OH D-opt @ 0.0123 ms            OH ~ 472.48 ppm
+  3. OH D-opt @ 0.0487 ms            OH ~ 261.02 ppm
+
+H2O target probes (window 1.0 µs .. 0.0434 ms, independent D-optimal, k1/k2/k5):
+  1. H2O D-opt @ 0.0032 ms           H2O ~ 1469.11 ppm
+  2. H2O D-opt @ 0.0082 ms           H2O ~ 2163.94 ppm
+  3. H2O D-opt @ 0.0382 ms           H2O ~ 3497.94 ppm
+
+Starting fresh: 40000 simulations
+  2000/40000  200.6 sim/s  failed=0
+  4000/40000  199.6 sim/s  failed=0
+  6000/40000  199.0 sim/s  failed=0
+  8000/40000  197.8 sim/s  failed=0
+  10000/40000  196.8 sim/s  failed=0
+  12000/40000  195.9 sim/s  failed=0
+  14000/40000  195.1 sim/s  failed=0
+  16000/40000  194.1 sim/s  failed=0
+  18000/40000  193.3 sim/s  failed=0
+  20000/40000  192.6 sim/s  failed=0
+  22000/40000  191.8 sim/s  failed=0
+  24000/40000  191.0 sim/s  failed=0
+  26000/40000  190.4 sim/s  failed=0
+  28000/40000  189.8 sim/s  failed=0
+  30000/40000  189.2 sim/s  failed=0
+  32000/40000  188.7 sim/s  failed=0
+  34000/40000  188.1 sim/s  failed=0
+  36000/40000  187.5 sim/s  failed=0
+  38000/40000  186.9 sim/s  failed=0
+  40000/40000  186.4 sim/s  failed=0
+
+Shapes: X=(40000, 6)  Y=(40000, 6)  (failed=0)
+  OH outputs:  columns 0..2
+  H2O outputs: columns 3..5
+Split: train=32000  val=4000  test=4000
+
+Training (1398 K joint OH+H2O+k5, 3-pt OH / 3-pt H2O, OH: 1us-0.0502ms [50%-peak ceiling] / H2O: 1us-0.0434ms [95%-rise rule]) ...
+  ep     1 | train 1.7631e+03 | val 1.5245e+01 | gap 0.009 | wd 5.0e-07 | lr 3.0e-02
+  ep   500 | train 8.9183e-02 | val 7.3092e-02 | gap 0.820 | wd 1.0e-08 | lr 3.0e-02
+  ep  1000 | train 5.6462e-02 | val 5.9252e-02 | gap 1.049 | wd 1.0e-08 | lr 1.5e-02
+  ep  1500 | train 5.1448e-02 | val 5.0861e-02 | gap 0.989 | wd 1.0e-08 | lr 1.5e-02
+  ep  2000 | train 4.9516e-02 | val 5.0570e-02 | gap 1.021 | wd 1.0e-08 | lr 7.5e-03
+  ep  2500 | train 4.8769e-02 | val 4.8639e-02 | gap 0.997 | wd 1.0e-08 | lr 3.7e-03
+  ep  3000 | train 4.8202e-02 | val 4.8370e-02 | gap 1.003 | wd 1.0e-08 | lr 9.4e-04
+  ep  3500 | train 4.8127e-02 | val 4.8138e-02 | gap 1.000 | wd 1.0e-08 | lr 4.7e-04
+  ep  4000 | train 4.8068e-02 | val 4.8072e-02 | gap 1.000 | wd 1.0e-08 | lr 1.2e-04
+  ep  4500 | train 4.8026e-02 | val 4.8066e-02 | gap 1.001 | wd 1.0e-08 | lr 2.9e-05
+  ep  5000 | train 4.8018e-02 | val 4.8059e-02 | gap 1.001 | wd 1.0e-08 | lr 3.7e-06
+Done in 20.5 min.  Best val: 4.8055e-02
+
+========================================================================
+  1398 K Joint (OH + H2O), 3 active params (k1,k2,k5)  |  Zhang Table 1
+========================================================================
+
+OH accuracy:
+  Set 1  sigma=0.1  N=661    mean=  1.13% (<= 1%)  p95=  3.75% (<= 2%)  FAIL
+  Set 2  sigma=0.3  N=659    mean=  2.58% (<= 2%)  p95=  8.16% (<= 5%)  FAIL
+  Set 3  sigma=0.5  N=2680   mean=  4.16% (<= 3%)  p95= 14.72% (<= 10%)  FAIL
+
+H2O accuracy:
+  Set 1  sigma=0.1  N=661    mean=  0.63% (<= 1%)  p95=  1.55% (<= 2%)  PASS
+  Set 2  sigma=0.3  N=659    mean=  1.03% (<= 2%)  p95=  2.91% (<= 5%)  PASS
+  Set 3  sigma=0.5  N=2680   mean=  1.77% (<= 3%)  p95=  5.38% (<= 10%)  PASS
+========================================================================
+does NOT meet all Zhang Table 1 requirements.
+
+Saved: result_1398k_joint_k5.pt
