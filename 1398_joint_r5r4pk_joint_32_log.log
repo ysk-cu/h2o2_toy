@@ -1,0 +1,118 @@
+R1 (k1): A=2.490e+21  Ea=48749 cal/mol
+R2 (k2): A=7.590e+10  Ea=7270 cal/mol
+R5 (k5): A=3.340e+01  b=+2.42  Ea=-1930 cal/mol
+R4 (k4): A=2.890e+10  b=+0.00  Ea=-497 cal/mol
+
+Running nominal profiles (1 ms, const-P) ...
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:143: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  reactor = ct.IdealGasConstPressureReactor(gas, energy='on')
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:149: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  profiles[j][k] = reactor.thermo.X[idx]
+  OH_peak = 508.3 ppm  at t = 0.0061 ms
+  H2O initial = 1234.3 ppm   H2O plateau = 3659.5 ppm
+  OH time window: 1.0 µs to 0.1000 ms
+  H2O time window: 1.0 µs to 0.1000 ms
+
+Computing sensitivities (OH on fine grid, H2O on coarse grid) ...
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:184: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  r.rate.low_rate = ct.Arrhenius(lr.pre_exponential_factor*f, lr.temperature_exponent, lr.activation_energy)
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:189: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  rr = ct.IdealGasConstPressureReactor(g, energy='on'); net = ct.ReactorNet([rr]); oh = g.species_index('OH')
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:191: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  for k in range(N_FINE): net.advance(T_FINE[k]); out[k] = rr.thermo.X[oh]
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:186: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f, r.rate.temperature_exponent, r.rate.activation_energy)
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:201: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  r.rate.low_rate = ct.Arrhenius(lr.pre_exponential_factor*f,
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:208: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  rr = ct.IdealGasConstPressureReactor(g, energy='on')
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:212: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  net.advance(T_SIM[k]); out[k] = rr.thermo.X[h2o]
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:204: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f,
+
+OH target probes (window 1.0 µs .. 0.1000 ms, TRUE joint D-optimal, k1/k2/k5/k4):
+  1. OH D-opt @ 0.0010 ms            OH ~ 210.34 ppm
+  2. OH D-opt @ 0.0061 ms            OH ~ 508.34 ppm
+  3. OH D-opt @ 0.0235 ms            OH ~ 406.48 ppm
+  4. OH D-opt @ 0.0694 ms            OH ~ 182.24 ppm
+
+H2O target probes (window 1.0 µs .. 0.1000 ms, TRUE joint D-optimal, k1/k2/k5/k4):
+  1. H2O D-opt @ 0.0081 ms           H2O ~ 2151.36 ppm
+  2. H2O D-opt @ 0.0132 ms           H2O ~ 2676.76 ppm
+  3. H2O D-opt @ 0.0183 ms           H2O ~ 3011.34 ppm
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:335: UserWarning: The balance properties of Sobol' points require n to be a power of 2.
+  base    = sampler.random(n_total)
+
+Starting fresh: 40000 simulations
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:358: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn1.rate.low_rate = ct.Arrhenius(new_A_R1, NOMINAL_B_R1, new_Ea_R1)
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:364: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn2.rate = ct.Arrhenius(new_A_R2, NOMINAL_B_R2, new_Ea_R2)
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:370: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn5.rate = ct.Arrhenius(new_A_R5, NOMINAL_B_R5, new_Ea_R5)
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:376: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn4.rate = ct.Arrhenius(new_A_R4, NOMINAL_B_R4, new_Ea_R4)
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:380: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  reactor  = ct.IdealGasConstPressureReactor(gas, energy='on')
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:393: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  y_oh[out_pos]  = reactor.thermo.X[oh_idx]
+/home/yk/h2o2_toy/nn_toy_1398k_joint_train_r5r4pk_joint.py:395: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  y_h2o[out_pos] = reactor.thermo.X[h2o_idx]
+  2000/40000  190.5 sim/s  failed=0
+  4000/40000  189.8 sim/s  failed=0
+  6000/40000  187.3 sim/s  failed=0
+  8000/40000  185.4 sim/s  failed=0
+  10000/40000  184.0 sim/s  failed=0
+  12000/40000  182.8 sim/s  failed=0
+  14000/40000  181.8 sim/s  failed=0
+  16000/40000  180.8 sim/s  failed=0
+  18000/40000  179.9 sim/s  failed=0
+  20000/40000  179.1 sim/s  failed=0
+  22000/40000  178.4 sim/s  failed=0
+  24000/40000  177.6 sim/s  failed=0
+  26000/40000  177.1 sim/s  failed=0
+  28000/40000  176.5 sim/s  failed=0
+  30000/40000  176.0 sim/s  failed=0
+  32000/40000  175.5 sim/s  failed=0
+  34000/40000  174.9 sim/s  failed=0
+  36000/40000  174.4 sim/s  failed=0
+  38000/40000  173.9 sim/s  failed=0
+  40000/40000  173.4 sim/s  failed=0
+
+Shapes: X=(40000, 8)  Y=(40000, 7)  (failed=0)
+  OH outputs:  columns 0..3
+  H2O outputs: columns 4..6
+Split: train=32000  val=4000  test=4000
+
+Training (1398 K joint OH+H2O+k5+k4, 4-pt OH / 3-pt H2O, OH: 1us-0.1000ms [fixed] / H2O: 1us-0.1000ms [fixed, TRUE JOINT D-OPT]) ...
+  ep     1 | train 1.0185e+03 | val 3.1261e+00 | gap 0.003 | wd 5.0e-07 | lr 3.0e-02
+  ep   500 | train 9.1508e-02 | val 9.3928e-02 | gap 1.026 | wd 1.0e-08 | lr 1.5e-02
+  ep  1000 | train 5.2749e-02 | val 5.1040e-02 | gap 0.968 | wd 1.0e-08 | lr 1.5e-02
+  ep  1500 | train 4.4965e-02 | val 4.3917e-02 | gap 0.977 | wd 1.0e-08 | lr 7.5e-03
+  ep  2000 | train 4.5337e-02 | val 4.3457e-02 | gap 0.959 | wd 1.0e-08 | lr 7.5e-03
+  ep  2500 | train 4.0834e-02 | val 4.0509e-02 | gap 0.992 | wd 1.0e-08 | lr 3.7e-03
+  ep  3000 | train 3.9425e-02 | val 3.9244e-02 | gap 0.995 | wd 1.0e-08 | lr 9.4e-04
+  ep  3500 | train 3.8873e-02 | val 3.8701e-02 | gap 0.996 | wd 1.0e-08 | lr 9.4e-04
+  ep  4000 | train 3.8667e-02 | val 3.8758e-02 | gap 1.002 | wd 1.0e-08 | lr 9.4e-04
+  ep  4500 | train 3.8270e-02 | val 3.8278e-02 | gap 1.000 | wd 1.0e-08 | lr 4.7e-04
+  ep  5000 | train 3.8144e-02 | val 3.8230e-02 | gap 1.002 | wd 1.0e-08 | lr 2.3e-04
+Done in 23.0 min.  Best val: 3.8113e-02
+
+========================================================================
+  1398 K Joint (OH + H2O), 4 active params (k1,k2,k5,k4, TRUE JOINT D-OPT)  |  Zhang Table 1
+========================================================================
+
+OH accuracy:
+  Set 1  sigma=0.1  N=661    mean=  1.09% (<= 1%)  p95=  3.35% (<= 2%)  FAIL
+  Set 2  sigma=0.3  N=659    mean=  2.17% (<= 2%)  p95=  7.21% (<= 5%)  FAIL
+  Set 3  sigma=0.5  N=2680   mean=  3.65% (<= 3%)  p95= 12.62% (<= 10%)  FAIL
+
+H2O accuracy:
+  Set 1  sigma=0.1  N=661    mean=  0.30% (<= 1%)  p95=  0.76% (<= 2%)  PASS
+  Set 2  sigma=0.3  N=659    mean=  0.67% (<= 2%)  p95=  1.84% (<= 5%)  PASS
+  Set 3  sigma=0.5  N=2680   mean=  1.06% (<= 3%)  p95=  3.00% (<= 10%)  PASS
+========================================================================
+does NOT meet all Zhang Table 1 requirements.
+
+Saved: result_1398k_joint_r5r4pk_joint_dopt_32.pt

@@ -32,7 +32,18 @@
       "Bash(sed -i \"4a # 5-OH-TARGET variant: N_OH_TARGETS=5 \\(was 3\\) to dilute the 1us rise's k1 pull\\\\n# and add decay-region k5 constraint. Base = normalized k5.py \\(50% ceiling\\). Watch\\\\n# fittability: 8 outputs on 16 nodes is a stretch \\(3-OH already failed Zhang\\).\" nn_toy_1398k_joint_train_k5_5oh.py)",
       "Bash(nohup python -u nn_toy_1398k_joint_train_k5_5oh.py)",
       "Bash(echo \"launched 5-OH training \\(PID $!\\)\")",
-      "Bash(timeout 200 bash -c 'until grep -q \"OH target probes\\\\|Error\\\\|Traceback\\\\|assert\" 1398_joint_k5_5oh_log.log 2>/dev/null; do sleep 4; done')"
+      "Bash(timeout 200 bash -c 'until grep -q \"OH target probes\\\\|Error\\\\|Traceback\\\\|assert\" 1398_joint_k5_5oh_log.log 2>/dev/null; do sleep 4; done')",
+      "Bash(timeout 120 python -u probe_1192.py)",
+      "Bash(echo \"EXIT_$?\")",
+      "Bash(cp nn_toy_1398k_joint_train_k5_joint.py nn_toy_1398k_joint_train_k5r4_joint.py)",
+      "Bash(cp nn_toy_1398k_joint_train_k5_joint.py nn_toy_1192k_joint_train_k5_joint.py)",
+      "Bash(cp nn_toy_1398k_joint_train_k5_joint.py nn_toy_1192k_joint_train_k5r4_joint.py)",
+      "Bash(python /tmp/claude-1015/-home-yk-h2o2-toy/d7290cfb-cf66-4189-b3ba-be2126582a1a/scratchpad/patch.py)",
+      "Bash(timeout 300 python -u probe_4x4.py)",
+      "Bash(bash /tmp/claude-1015/-home-yk-h2o2-toy/d7290cfb-cf66-4189-b3ba-be2126582a1a/scratchpad/run_all.sh)",
+      "Bash(echo \"DRIVER_EXIT_$?\")",
+      "Bash(jupyter nbconvert *)",
+      "Bash(grep -vE \"^# In\\\\[|^$\")"
     ],
     "additionalDirectories": [
       "/home/yk/h2o2_toy"

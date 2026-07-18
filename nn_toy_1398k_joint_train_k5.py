@@ -109,7 +109,7 @@ T_MIN_TARGET_OH = 1e-6    # 1 µs -- guard against literal t~0 solver artifacts 
 # (Denormalized/absolute-sensitivity selection was compared as an alternative: it
 #  also dodges the deep decay [~295 ppm] but gives k5 cond ~96 AND mismatches the
 #  log-space inference metric, so this restricted-normalized ceiling dominates it.)
-T_MAX_TARGET_OH_DATA_CEILING = 1e-4    # hard dataset ceiling (never exceed CSV range)
+T_MAX_TARGET_OH_DATA_CEILING = 3e-5    # hard dataset ceiling (never exceed CSV range)
 T_MAX_OH_PEAK_FRAC = 0.50              # tuned for k5; a FRACTION (self-scales), not
                                         # an absolute time -- try 0.40-0.55 if needed
 
@@ -138,8 +138,8 @@ wd_gap_low     = 1.02
 WEIGHT_OH  = 1.0
 WEIGHT_H2O = 1.0
 
-CHECKPOINT_PATH = 'ckpt_1398k_joint_k5.pt'
-RESULT_PATH     = 'result_1398k_joint_k5.pt'
+CHECKPOINT_PATH = 'ckpt_1398k_joint_k5_2.pt'
+RESULT_PATH     = 'result_1398k_joint_k5_2.pt'
 SIGMA_REQS      = {0.1: (0.01, 0.02), 0.3: (0.02, 0.05), 0.5: (0.03, 0.10)}
 LOG_EPS         = 1e-12
 
