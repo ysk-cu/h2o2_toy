@@ -1,0 +1,306 @@
+==============================================================================
+  H2O2 RATE PARAMETER OPTIMIZATION -- FULL ANALYSIS
+  run at        : 2026-09-09 18:07:18
+  mechanism     : chem_cti_toy_model_ogog.yaml
+  conditions    : 1192, 1398 K
+  output        : analysis_1192_1398_20260909_180718/
+==============================================================================
+
+  experimental uncertainty (log space)  : 0.05
+  prior sd of normalized parameters     : 0.5  (lambda = 4)
+  prior sd of the OH trigger offset     : 2.0 us
+  inconsistency threshold               : |F| > 1.0
+
+==============================================================================
+  [1]  SETUP AND VALIDATION
+==============================================================================
+
+  --- surrogate files -----------------------------------------------------
+      1192 K / 1.95 atm    result_1192k_train_final.pt   4 OH + 3 H2O targets, hidden 32, best val loss 3.414e-02
+      1398 K / 1.91 atm    result_1398k_train_final.pt   4 OH + 3 H2O targets, hidden 32, best val loss 3.608e-02
+      shared parameters: ['lnA_R1', 'Ea_R1', 'lnA_R2', 'Ea_R2', 'lnA_R5', 'Ea_R5', 'lnA_R4', 'Ea_R4']
+      LN_F = 2.302585, SIGMA_E = 5000 cal/mol
+
+  --- mechanism content ---------------------------------------------------
+      R1: H2O2 (+M) <=> 2 OH (+M)          1 branch(es) at [21]   falloff, low pressure limit is the active parameter
+      R2: H2O2 + OH <=> H2O + HO2          2 branch(es) at [25, 26]
+      R5: 2 OH <=> H2O + O                 1 branch(es) at [4]
+      R4: HO2 + OH <=> H2O + O2            1 branch(es) at [18]
+      at 1192 K: k(R1) = 2.415e+05, k(R2) = 5.013e+09, k(R5) = 2.1e+09, k(R4) = 3.565e+10
+      at 1398 K: k(R1) = 3.473e+06, k(R2) = 7.059e+09, k(R5) = 2.739e+09, k(R4) = 3.456e+10
+
+  --- perturbation is an exact multiplicative factor on k(T) --------------
+      A common A factor and a common Ea shift on every duplicate branch
+      must give  k'(T)/k(T) = exp(x_A*LN_F - x_Ea*SIGMA_E/RT) exactly.
+      R1 @1192 K (low-P limit)  k'/k = 11.65969055  expected 11.65969055  dev 3.0e-15  ok
+      R1 @1398 K (low-P limit)  k'/k = 10.29566632  expected 10.29566632  dev 8.9e-16  ok
+      R2 @1192 K                k'/k = 11.65969055  expected 11.65969055  dev 0.0e+00  ok
+      R2 @1398 K                k'/k = 10.29566632  expected 10.29566632  dev 3.3e-16  ok
+      R5 @1192 K                k'/k = 11.65969055  expected 11.65969055  dev 6.7e-16  ok
+      R5 @1398 K                k'/k = 10.29566632  expected 10.29566632  dev 1.1e-15  ok
+      R4 @1192 K                k'/k = 11.65969055  expected 11.65969055  dev 0.0e+00  ok
+      R4 @1398 K                k'/k = 10.29566632  expected 10.29566632  dev 0.0e+00  ok
+      all reactions pass
+
+  --- surrogate against the full model ------------------------------------
+      At x = 0 both must agree. A probe with one parameter displaced
+      catches a training / optimization mismatch that x = 0 hides,
+      for example a duplicate pair perturbed on one branch only.
+      1192 K / 1.95 atm
+        x = 0            largest  8.75%   7.57 8.75 0.56 0.63 0.13 0.02 0.14
+        lnA_R1 = +0.3    largest  6.33%   6.33 5.57 0.49 2.83 0.53 0.17 0.03
+        lnA_R2 = +0.3    largest 15.99%   8.77 5.97 15.13 15.99 0.07 0.09 0.43   <-- CHECK
+        lnA_R5 = +0.3    largest  8.52%   7.19 8.52 0.75 3.80 0.04 0.03 0.16
+        lnA_R4 = +0.3    largest  6.90%   6.90 5.93 1.63 1.35 0.14 0.09 0.04
+      1398 K / 1.91 atm
+        x = 0            largest 53.12%   53.12 9.21 5.26 0.87 41.91 18.49 0.43   <-- CHECK
+        lnA_R1 = +0.3    largest 50.35%   44.31 11.91 5.76 1.37 50.35 15.04 0.05   <-- CHECK
+        lnA_R2 = +0.3    largest 44.34%   29.26 26.12 16.60 8.80 44.34 17.09 0.52   <-- CHECK
+        lnA_R5 = +0.3    largest 50.67%   50.67 11.53 3.05 1.70 42.03 18.19 0.07   <-- CHECK
+        lnA_R4 = +0.3    largest 48.85%   48.85 7.08 7.67 0.88 43.12 18.37 0.48   <-- CHECK
+      *** WARNING: the surrogate and the full model disagree by more
+      *** than 10%. Check that the mechanism file matches the one used
+      *** for training, and that both scripts perturb the duplicate
+      *** branches the same way.
+
+==============================================================================
+  [2]  OPTIMIZATION
+==============================================================================
+
+  14 data points, 8 rate parameters + 2 trigger offsets = 10 unknowns
+      multi-start: 16 runs, best 2*cost = 90.4313, 1/16 within 1%
+      note: restarts disagree; compare the x* they reach before trusting one of them
+      objective value (Zhang Eq. 8) = 90.431266
+
+  --- optimized rate parameters -------------------------------------------
+      parameter        x*  posterior sd  sd/prior   physical value
+      lnA_R1      +0.5479        0.2180      0.44   A factor x 3.5312
+      Ea_R1       +0.3116        0.2457      0.49   Ea +1558 cal/mol
+      lnA_R2      +0.8887        0.2341      0.47   A factor x 7.7400
+      Ea_R2       +0.4916        0.2579      0.52   Ea +2458 cal/mol
+      lnA_R5      +0.0920        0.3104      0.62   A factor x 1.2361
+      Ea_R5       +0.3508        0.3972      0.79   Ea +1754 cal/mol
+      lnA_R4      -0.4215        0.4456      0.89   A factor x 0.3789
+      Ea_R4       +0.6437        0.4492      0.90   Ea +3218 cal/mol
+
+  --- OH trigger offset ---------------------------------------------------
+      1192 K / 1.95 atm    tau = +0.147 us   leverage 0.165 (threshold 0.146)
+      1398 K / 1.91 atm    tau = -5.400 us   leverage 0.492 (threshold 0.146)
+
+  --- Zhang freezing test on the rate parameters --------------------------
+      criterion: |x| < 0.0212 AND posterior sd > 0.480  (did not move and did not tighten)
+      flagged for freezing: none
+
+  --- posterior structure -------------------------------------------------
+      sd along the eigen-directions (prior = 0.5):
+      0.5000  0.4908  0.4447  0.3933  0.1960  0.0408  0.0161  0.0076
+      directions still at the prior level: 2 of 8   (these are not determined by the data)
+      condition number of the posterior covariance: 4375
+        sd = 0.5000   largest component: Ea_R4    vector = [ 0.01  0.01  0.03  0.03  0.27  0.31 -0.61 -0.68]
+        sd = 0.4908   largest component: Ea_R5    vector = [ 0.16  0.19  0.21  0.25 -0.49 -0.67 -0.28 -0.22]
+        sd = 0.4447   largest component: lnA_R4   vector = [-0.31 -0.37 -0.26 -0.36  0.08 -0.34 -0.57  0.35]
+      correlation between ln A and Ea:
+        R1   +0.987   (still on the A / Ea line: only the combination is determined)
+        R2   +0.972   (still on the A / Ea line: only the combination is determined)
+        R5   +0.818
+        R4   +0.224
+
+  --- overall goodness of fit ---------------------------------------------
+      sum of squared data residuals = 74.527 over 14 data points
+      effective degrees of freedom between 4 (prior weak) and 14 (prior strong)
+      chi-square 95% critical value: 9.49 .. 23.68
+      verdict: NOT consistent under either convention
+
+  --- rate constants relative to nominal, at the experimental temperatures 
+      reaction   T [K]   k/k_nom         2 sigma range
+      R1        1192     1.829        1.549 .. 2.160
+      R1        1398     2.015        1.663 .. 2.442
+      R2        1192     2.742        2.123 .. 3.541
+      R2        1398     3.195        2.416 .. 4.225
+      R5        1192     0.589        0.224 .. 1.548
+      R5        1398     0.657        0.278 .. 1.556
+      R4        1192     0.097        0.008 .. 1.142
+      R4        1398     0.119        0.012 .. 1.199
+
+  --- pivot temperature (where this fit is most certain) ------------------
+      Away from the pivot the A factor and Ea trade off and the band widens.
+      Quote k at the pivot, not at the edges of an extrapolated range.
+      R1     pivot =   1247 K   k/k_nom = 1.883 +/- 0.080 (1 sd of ln k)   [at 2500 K the sd is 0.261]
+      R2     pivot =   1238 K   k/k_nom = 2.850 +/- 0.126 (1 sd of ln k)   [at 2500 K the sd is 0.293]
+      R5     pivot =   1709 K   k/k_nom = 0.737 +/- 0.411 (1 sd of ln k)   [at 2500 K the sd is 0.451]
+      R4     pivot =   2500 K   k/k_nom = 0.198 +/- 1.024 (1 sd of ln k)   [at 2500 K the sd is 1.024]
+
+==============================================================================
+  [3]  CONSISTENCY TEST  (Zhang Eq. 13)
+==============================================================================
+
+  F = (observed - predicted) / (2 x experimental uncertainty).
+  |F| > 1 means that data point cannot be reconciled with the model.
+  The Cantera column is the one to judge on: it uses the full model
+  rather than the surrogate, so it is not affected by surrogate error.
+
+  --- 1192 K / 1.95 atm   tau = +0.147 us ---------------------------------
+      target            F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH  0.0180 ms            +0.409        +2.795      +2.386     1.322   INCONSISTENT
+      OH  0.0263 ms            -0.213        +2.220      +2.433     1.249   INCONSISTENT
+      OH  0.4252 ms            +0.248        +0.559      +0.311     1.058   ok
+      OH  0.6532 ms            +0.430        +0.704      +0.275     1.073   ok
+      H2O 0.0051 ms            -0.346        -0.356      -0.010     0.965   ok
+      H2O 0.0928 ms            -1.642        -1.603      +0.039     0.852   INCONSISTENT
+      H2O 0.3709 ms            -0.093        -0.123      -0.030     0.988   ok
+      largest |F| = 2.795   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 2.433 (27.5% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   tau = -5.400 us ---------------------------------
+      target            F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH  0.0071 ms            +0.248        -2.891      -3.140     0.749   INCONSISTENT
+      OH  0.0126 ms            -0.283        +1.391      +1.674     1.149   INCONSISTENT
+      OH  0.0800 ms            +0.003        +0.148      +0.145     1.015   ok
+      OH  0.1000 ms            -0.225        -0.458      -0.233     0.955   ok
+      H2O 0.0079 ms            +3.862        -2.940      -6.801     0.745   INCONSISTENT
+      H2O 0.0130 ms            -0.493        -1.595      -1.102     0.853   INCONSISTENT
+      H2O 0.0526 ms            +0.046        -0.006      -0.052     0.999   ok
+      largest |F| = 2.940   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 6.801 (97.4% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+==============================================================================
+  [4]  CONFIRMATION WITHOUT THE SURROGATE
+==============================================================================
+
+  The Cantera column of the consistency test checks the prediction at
+  a given x. It does not check x itself, because x came out of the
+  surrogate. Repeating the fit with Cantera in place of the network is
+  the only check on the optimized parameters. Starting from the
+  surrogate optimum, so this converges in a few iterations.
+
+  --- optimized parameters with and without the surrogate -----------------
+      parameter    surrogate     Cantera   difference    in sd   physical difference
+      lnA_R1         +0.5479     -0.3732      -0.9211     4.23   A factor x 0.1199
+      Ea_R1          +0.3116     -0.4589      -0.7705     3.14   -3852 cal/mol
+      lnA_R2         +0.8887     +0.0036      -0.8851     3.78   A factor x 0.1303
+      Ea_R2          +0.4916     -0.0638      -0.5554     2.15   -2777 cal/mol
+      lnA_R5         +0.0920     -0.1166      -0.2087     0.67   A factor x 0.6185
+      Ea_R5          +0.3508     -0.0769      -0.4277     1.08   -2138 cal/mol
+      lnA_R4         -0.4215     -0.2340      +0.1875     0.42   A factor x 1.5400
+      Ea_R4          +0.6437     +0.1660      -0.4777     1.06   -2388 cal/mol
+      largest difference is 4.23 posterior standard deviations
+      *** the surrogate is shifting the optimum; improve it before
+      *** reporting these parameters
+
+==============================================================================
+  [5]  SIGNIFICANCE OF EACH REACTION
+==============================================================================
+
+  Each reaction is fixed at its nominal value and the fit repeated.
+  The rise in the sum of squared data residuals is compared against the
+  chi-square distribution with 2 degrees of freedom (one A factor and
+  one activation energy). Critical values: 5.99 at 95%, 9.21 at 99%.
+  A reaction that does not raise the residual is not determined by the
+  data and should be frozen (Zhang Eqs. 15-16).
+
+      frozen      residual sum      rise    p value   verdict
+      none              74.527                        reference
+      R1               311.009   236.482     0.0000   significant
+      R2                95.859    21.332     0.0000   significant
+      R5               130.101    55.575     0.0000   significant
+      R4                87.287    12.760     0.0017   significant
+
+==============================================================================
+  [6]  PREDICTIVE TEST  (leave one condition out)
+==============================================================================
+
+  Each condition is removed from the fit in turn and then predicted.
+  This is the only test of predictive capability: the consistency test
+  above uses every condition in the fit, so it can only show internal
+  agreement. A prediction that fails while the joint fit passes means
+  the conditions are being reconciled by parameters rather than agreeing.
+
+  --- fit on 1398 K, predict 1192 K ---------------------------------------
+      x* = [ 0.549  -0.4123  0.6496 -0.5628 -0.3594  0.2853 -0.7567  0.5756]
+
+  --- 1192 K / 1.95 atm   [HELD OUT: this is a prediction]   tau = +6.000 us 
+      target            F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH  0.0180 ms            +1.627        +4.488      +2.861     1.566   INCONSISTENT
+      OH  0.0263 ms            +2.281        +3.597      +1.317     1.433   INCONSISTENT
+      OH  0.4252 ms            +7.525        +2.661      -4.864     1.305   INCONSISTENT
+      OH  0.6532 ms            +9.632        +1.519      -8.113     1.164   INCONSISTENT
+      H2O 0.0051 ms            -2.925        -2.698      +0.227     0.764   INCONSISTENT
+      H2O 0.0928 ms            -3.446        -3.437      +0.010     0.709   INCONSISTENT
+      H2O 0.3709 ms            -0.222        -0.209      +0.013     0.979   ok
+      largest |F| = 4.488   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 8.113 (125.1% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   tau = -0.201 us ---------------------------------
+      target            F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH  0.0071 ms            -0.223        +1.298      +1.522     1.139   INCONSISTENT
+      OH  0.0126 ms            +0.136        +0.782      +0.645     1.081   ok
+      OH  0.0800 ms            -0.181        -3.337      -3.156     0.716   INCONSISTENT
+      OH  0.1000 ms            +0.211        -4.560      -4.771     0.634   INCONSISTENT
+      H2O 0.0079 ms            +0.857        -4.594      -5.451     0.632   INCONSISTENT
+      H2O 0.0130 ms            -1.885        -2.387      -0.502     0.788   INCONSISTENT
+      H2O 0.0526 ms            +0.303        +0.059      -0.244     1.006   ok
+      largest |F| = 4.594   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 5.451 (72.5% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+      prediction for 1192 K: largest |F| = 4.488   FAILS
+
+  --- fit on 1192 K, predict 1398 K ---------------------------------------
+      x* = [ 0.0117 -0.0055 -0.1131  0.1013  0.4181 -0.3816  0.0076 -0.0065]
+
+  --- 1192 K / 1.95 atm   tau = +0.187 us ---------------------------------
+      target            F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH  0.0180 ms            -0.115        -1.860      -1.745     0.830   INCONSISTENT
+      OH  0.0263 ms            +0.174        -1.872      -2.045     0.829   INCONSISTENT
+      OH  0.4252 ms            -0.093        -1.005      -0.912     0.904   INCONSISTENT
+      OH  0.6532 ms            -0.012        -0.571      -0.558     0.945   ok
+      H2O 0.0051 ms            +0.138        +0.173      +0.035     1.017   ok
+      H2O 0.0928 ms            -0.205        -0.188      +0.017     0.981   ok
+      H2O 0.3709 ms            +0.016        +0.060      +0.045     1.006   ok
+      largest |F| = 1.872   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 2.045 (22.7% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   [HELD OUT: this is a prediction]   tau = +2.456 us 
+      target            F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH  0.0071 ms            +6.929        -0.163      -7.091     0.984   ok
+      OH  0.0126 ms            -0.962        -0.263      +0.700     0.974   ok
+      OH  0.0800 ms            +2.587        +2.339      -0.249     1.263   INCONSISTENT
+      OH  0.1000 ms            +1.410        +0.866      -0.544     1.090   ok
+      H2O 0.0079 ms            +4.673        -0.591      -5.263     0.943   ok
+      H2O 0.0130 ms            +1.897        -0.140      -2.037     0.986   ok
+      H2O 0.0526 ms            +0.101        +0.101      -0.000     1.010   ok
+      largest |F| = 2.339   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 7.091 (103.2% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+      prediction for 1398 K: largest |F| = 2.339   FAILS
+
+==============================================================================
+  [7]  FIGURES
+==============================================================================
+      saved analysis_1192_1398_20260909_180718/profiles.png
+
+==============================================================================
+  [8]  SUMMARY
+==============================================================================
+
+  conditions fitted            : 1192, 1398 K
+  free rate parameters         : 8 of 8
+  objective value              : 90.4313
+  sum of squared data residuals: 74.527 over 14 points
+  largest |F| (Cantera)        : 2.940   INCONSISTENT
+  surrogate shift in optimum   : 4.23 sd
+  directions still at prior    : 2 of 8
+  R1 significance              : p = 0.0000  significant
+  R2 significance              : p = 0.0000  significant
+  R5 significance              : p = 0.0000  significant
+  R4 significance              : p = 0.0017  significant
+  prediction of 1192 K          : largest |F| = 4.488  FAILS
+  prediction of 1398 K          : largest |F| = 2.339  FAILS
+
+  elapsed: 9.8 s
+  written: analysis_1192_1398_20260909_180718/analysis.log
+           analysis_1192_1398_20260909_180718/result.json
+           analysis_1192_1398_20260909_180718/profiles.png

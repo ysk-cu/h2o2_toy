@@ -22,7 +22,7 @@ torch.manual_seed(SEED)
 
 # ── Mechanism & nominal rate constants ────────────────────────────────────────
 
-YAML_FILE = 'chem_cti_toy_model_og.yaml'
+YAML_FILE = 'chem_cti_toy_model_ogog.yaml'
 mol_units = ct.UnitSystem({
     "length": "cm", "mass": "g", "time": "s",
     "quantity": "mol", "pressure": "dyn / cm^2", "energy": "erg",

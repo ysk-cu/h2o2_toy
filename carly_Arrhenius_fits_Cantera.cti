@@ -1,0 +1,54 @@
+# ************************************************************************
+# Selected reactions with optimized rate constants from:
+#
+#   Carly E. LaGrotta, Qinghui Meng, Lei Lei, Mark C. Barbet, Zekai Hong, Michael P. Burke,
+#   "Resolving Discrepancies Between State-of-the-art Theory and Experiment for HO2  + HO2 
+#   via Multiscale Informatics," Journal of Physical Chemistry A (2023)
+#   https://doi.org/10.1021/acs.jpca.2c07297.
+
+# Please contact M.P. Burke (mpburke@columbia.edu) for further information
+
+reaction("HO2 + HO2 <=> H2O2 + O2", [7.93143247e+02, 2.85418458e+00, -9.22968644e+02], options = "duplicate")
+reaction("HO2 + HO2 <=> H2O2 + O2", [1.40287606e+15, -1.46599397e+00, -8.73576182e+02], options = "duplicate")
+
+
+reaction("HO2 + HO2 <=> O2 + 2 OH", [2.64940286e+17, -1.42708413e+00, 8.49193445e+03])
+
+#200-800 K 
+reaction("HOOOOH => 2 HO2", [1.82077302e+38, -8.77288922e+00,  1.86827733e+04])
+
+#8000-2000 K
+#reaction("HOOOOH => 2 HO2", [3.32757750e+03, 1.97317861e+00, 6.84335587e+03], 
+#options= "duplicate")
+#reaction("HOOOOH => 2 HO2", [.32760075e+03, 1.97320171e+00, 6.85308080e+03], 
+#options= "duplicate")
+
+#2000-2500 K
+#reaction("HOOOOH => 2 HO2" , [2.21586601e+37, -7.16781883e+00,  3.77423714e+04])
+
+#200 – 800 K 
+reaction("2 HO2 => HOOOOH", [6.21428758e+26, -5.95332823e+00,  1.29950489e+03])
+
+#800 -2000  K
+#reaction("2 HO2 => HOOOOH", [1.71944917e+23 -3.57732688e+00,  1.88652135e+04], 
+#options= "duplicate")
+#reaction("2 HO2 => HOOOOH", [2.78869216e+7, 1.04062375e-04, -6.20644076e+03] ], 
+#options= "duplicate")
+
+#2000 – 2500 K
+#reaction("2 HO2 => HOOOOH", [5.67514847e+28 -5.09187197e+00  2.34279998e+04])
+
+reaction("HO2 + OH <=> H2O + O2", [1.23646897e+09, 1.22686493e+00, -2.90970210e+03], options = "duplicate")
+reaction("HO2 + OH <=> H2O + O2", [-5.75989229e+07, 1.42858415e+00, -3.77109904e+03], options = "duplicate")
+
+reaction("HO2 + OH <=> H2O + O2X", [2111.33923045, 2.67589343, -1297.31029924])
+
+reaction("2 OH <=> H2O + O", [8.81776798e+03, 2.51974969e+00, -2.57540034e+03])
+
+falloff_reaction( "2 OH (+M) <=> H2O2 (+M)",
+        kf = [3.49105E+12, 0.2048623456878356, 1503.0003607276622],
+        kf0   = [3.93967E+25, -3.2111376543121644, 2713.0003607276617],
+        efficiencies = "CO2:3.0  H2O:10.0  HE:0.4  N2:2.0",
+        falloff = Troe(A = 0.55, T3 = 1e-30, T1 = 1.0000000000000002e+30, T2 = 1e+30))
+
+# ************************************************************************

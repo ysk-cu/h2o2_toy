@@ -29,7 +29,8 @@ mol_units = ct.UnitSystem({
     "temperature": "K", "current": "A", "activation-energy": "cal / mol"})
 
 IDX_R1 = 21   # H2O2(+M) <=> OH + OH (+M)  — falloff   (k1)
-IDX_R2 = 25   # H2O2 + OH <=> HO2 + H2O    — Arrhenius (k2)
+# IDX_R2 = 25
+IDX_R2_ALL = [25, 26]   # H2O2 + OH <=> HO2 + H2O    — Arrhenius (k2)
 IDX_R5 = 4    # 2 OH <=> H2O + O           — Arrhenius (k5)
 IDX_R4 = 18   # HO2 + OH <=> H2O + O2      — Arrhenius (k4, Burke R4)
 
@@ -39,11 +40,17 @@ NOMINAL_B_R1      = _gas_nom.reaction(IDX_R1).rate.low_rate.temperature_exponent
 NOMINAL_EA_R1_si  = _gas_nom.reaction(IDX_R1).rate.low_rate.activation_energy
 NOMINAL_EA_R1_cal = mol_units.convert_activation_energy_to(
     f"{NOMINAL_EA_R1_si} J/kmol", "cal / mol")
-NOMINAL_A_R2      = _gas_nom.reaction(IDX_R2).rate.pre_exponential_factor
-NOMINAL_B_R2      = _gas_nom.reaction(IDX_R2).rate.temperature_exponent
-NOMINAL_EA_R2_si  = _gas_nom.reaction(IDX_R2).rate.activation_energy
-NOMINAL_EA_R2_cal = mol_units.convert_activation_energy_to(
-    f"{NOMINAL_EA_R2_si} J/kmol", "cal / mol")
+NOMINAL_R2 = [(i,
+               _gas_nom.reaction(i).rate.pre_exponential_factor,
+               _gas_nom.reaction(i).rate.temperature_exponent,
+               mol_units.convert_activation_energy_to(
+                   f"{_gas_nom.reaction(i).rate.activation_energy} J/kmol", "cal / mol"))
+              for i in IDX_R2_ALL]
+# NOMINAL_A_R2      = _gas_nom.reaction(IDX_R2).rate.pre_exponential_factor
+# NOMINAL_B_R2      = _gas_nom.reaction(IDX_R2).rate.temperature_exponent
+# NOMINAL_EA_R2_si  = _gas_nom.reaction(IDX_R2).rate.activation_energy
+# NOMINAL_EA_R2_cal = mol_units.convert_activation_energy_to(
+#     f"{NOMINAL_EA_R2_si} J/kmol", "cal / mol")
 NOMINAL_A_R5      = _gas_nom.reaction(IDX_R5).rate.pre_exponential_factor
 NOMINAL_B_R5      = _gas_nom.reaction(IDX_R5).rate.temperature_exponent
 NOMINAL_EA_R5_si  = _gas_nom.reaction(IDX_R5).rate.activation_energy
@@ -57,7 +64,9 @@ NOMINAL_EA_R4_cal = mol_units.convert_activation_energy_to(
 del _gas_nom
 
 print(f'R1 (k1): A={NOMINAL_A_R1:.3e}  Ea={NOMINAL_EA_R1_cal:.0f} cal/mol')
-print(f'R2 (k2): A={NOMINAL_A_R2:.3e}  Ea={NOMINAL_EA_R2_cal:.0f} cal/mol')
+# print(f'R2 (k5): A={NOMINAL_A_R2:.3e}  b={NOMINAL_B_R2:+.2f}  Ea={NOMINAL_EA_R2_cal:.0f} cal/mol')
+for (_i, _A0, _b0, _Ea0_cal) in NOMINAL_R2:
+    print(f'R2 (k2) rxn {_i}: A={_A0:.3e}  b={_b0:+.2f}  Ea={_Ea0_cal:.0f} cal/mol')
 print(f'R5 (k5): A={NOMINAL_A_R5:.3e}  b={NOMINAL_B_R5:+.2f}  Ea={NOMINAL_EA_R5_cal:.0f} cal/mol')
 print(f'R4 (k4): A={NOMINAL_A_R4:.3e}  b={NOMINAL_B_R4:+.2f}  Ea={NOMINAL_EA_R4_cal:.0f} cal/mol')
 
@@ -72,7 +81,7 @@ INPUT_DIM   = 8
 
 TOTAL_SAMPLES = 40000
 SIGMA_LIST    = (0.1, 0.3, 0.5)
-RATIO_LIST    = (1/6, 1/6, 2/3)
+RATIO_LIST    = (1/4, 1/4, 1/2)
 
 # ── Shock-tube condition ──────────────────────────────────────────────────────
 
@@ -93,12 +102,14 @@ T_SIM   = np.linspace(DT_SIM, DT_SIM * N_STEPS, N_STEPS)   # 1 us ... 1 ms
 
 T_MIN_TARGET_OH = 1e-6    # 1 µs
 T_MAX_TARGET_OH = 1e-4    # 0.1 ms
+DT_MIN_OH = 0.05 * (T_MAX_TARGET_OH - T_MIN_TARGET_OH)
 T_MIN_TARGET_H2O = 1e-6
 T_MAX_TARGET_H2O = 1e-4 
+DT_MIN_H2O = 0.05 * (T_MAX_TARGET_H2O - T_MIN_TARGET_H2O)
 
 # ── NN / training hyper-parameters ───────────────────────────────────────────
 
-HIDDEN_DIM     = 32            # unit-norm, no floor
+HIDDEN_DIM     = 32
 lr_init        = 0.03
 TRAIN_FRAC     = 0.80
 VAL_FRAC       = 0.10
@@ -117,8 +128,8 @@ wd_gap_low     = 1.02
 WEIGHT_OH  = 1.0
 WEIGHT_H2O = 1.0
 
-CHECKPOINT_PATH = 'ckpt_1398k_joint_r5r4unnf_joint_dopt.pt'
-RESULT_PATH     = 'result_1398k_joint_r5r4unnf_joint_dopt_32.pt'
+CHECKPOINT_PATH = 'ckpt_1398k_train_final4.pt'
+RESULT_PATH     = 'result_1398k_train_final4.pt'
 SIGMA_REQS      = {0.1: (0.01, 0.02), 0.3: (0.02, 0.05), 0.5: (0.03, 0.10)}
 LOG_EPS         = 1e-12
 
@@ -171,13 +182,15 @@ print(f'  H2O time window: {T_MIN_TARGET_H2O*1e6:.1f} µs to {T_MAX_TARGET_H2O*1
 def _oh_profile(mult=None):
     g = ct.Solution(YAML_FILE)
     if mult:
-        i, f = mult; r = g.reaction(i)
-        if i == IDX_R1:
-            lr = r.rate.low_rate
-            r.rate.low_rate = ct.Arrhenius(lr.pre_exponential_factor*f, lr.temperature_exponent, lr.activation_energy)
-        else:
-            r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f, r.rate.temperature_exponent, r.rate.activation_energy)
-        g.modify_reaction(i, r)
+        idxs, f = mult
+        for i in ([idxs] if isinstance(idxs, int) else idxs):
+            r = g.reaction(i)
+            if i == IDX_R1:
+                lr = r.rate.low_rate
+                r.rate.low_rate = ct.Arrhenius(lr.pre_exponential_factor*f, lr.temperature_exponent, lr.activation_energy)
+            else:
+                r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f, r.rate.temperature_exponent, r.rate.activation_energy)
+            g.modify_reaction(i, r)
     g.TPX = T_INITIAL, P_INITIAL, INITIAL_X
     rr = ct.IdealGasConstPressureReactor(g, energy='on'); net = ct.ReactorNet([rr]); oh = g.species_index('OH')
     out = np.empty(N_FINE)
@@ -188,15 +201,17 @@ def _oh_profile(mult=None):
 def _h2o_profile(mult=None):
     g = ct.Solution(YAML_FILE)
     if mult:
-        i, f = mult; r = g.reaction(i)
-        if i == IDX_R1:
-            lr = r.rate.low_rate
-            r.rate.low_rate = ct.Arrhenius(lr.pre_exponential_factor*f,
-                                           lr.temperature_exponent, lr.activation_energy)
-        else:
-            r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f,
-                                  r.rate.temperature_exponent, r.rate.activation_energy)
-        g.modify_reaction(i, r)
+        idxs, f = mult
+        for i in ([idxs] if isinstance(idxs, int) else idxs):
+            r = g.reaction(i)
+            if i == IDX_R1:
+                lr = r.rate.low_rate
+                r.rate.low_rate = ct.Arrhenius(lr.pre_exponential_factor*f,
+                                               lr.temperature_exponent, lr.activation_energy)
+            else:
+                r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f,
+                                      r.rate.temperature_exponent, r.rate.activation_energy)
+            g.modify_reaction(i, r)
     g.TPX = T_INITIAL, P_INITIAL, INITIAL_X
     rr = ct.IdealGasConstPressureReactor(g, energy='on')
     net = ct.ReactorNet([rr]); h2o = g.species_index('H2O')
@@ -209,13 +224,15 @@ def _h2o_profile(mult=None):
 print('\nComputing sensitivities (OH on fine grid, H2O on coarse grid) ...')
 d = 0.01
 S_k1_oh = (_oh_profile((IDX_R1, 1+d)) - _nom_oh) / _nom_oh / d
-S_k2_oh = (_oh_profile((IDX_R2, 1+d)) - _nom_oh) / _nom_oh / d
+# S_k2_oh = (_oh_profile((IDX_R2, 1+d)) - _nom_oh) / _nom_oh / d
+S_k2_oh = (_oh_profile((IDX_R2_ALL, 1+d)) - _nom_oh) / _nom_oh / d
 S_k5_oh = (_oh_profile((IDX_R5, 1+d)) - _nom_oh) / _nom_oh / d
 S_k4_oh = (_oh_profile((IDX_R4, 1+d)) - _nom_oh) / _nom_oh / d
 S_oh = np.vstack([S_k1_oh, S_k2_oh, S_k5_oh, S_k4_oh]).T   # shape: (N_FINE, 4)
 
 S_k1_h2o = (_h2o_profile((IDX_R1, 1+d)) - _nom_h2o) / _nom_h2o / d
-S_k2_h2o = (_h2o_profile((IDX_R2, 1+d)) - _nom_h2o) / _nom_h2o / d
+# S_k2_h2o = (_h2o_profile((IDX_R2, 1+d)) - _nom_h2o) / _nom_h2o / d
+S_k2_h2o = (_h2o_profile((IDX_R2_ALL, 1+d)) - _nom_h2o) / _nom_h2o / d
 S_k5_h2o = (_h2o_profile((IDX_R5, 1+d)) - _nom_h2o) / _nom_h2o / d
 S_k4_h2o = (_h2o_profile((IDX_R4, 1+d)) - _nom_h2o) / _nom_h2o / d
 S_h2o = np.vstack([S_k1_h2o, S_k2_h2o, S_k5_h2o, S_k4_h2o]).T   # shape: (N_STEPS, 4)
@@ -224,7 +241,7 @@ S_h2o = np.vstack([S_k1_h2o, S_k2_h2o, S_k5_h2o, S_k4_h2o]).T   # shape: (N_STEP
 def select_targets_joint(t_oh, S_oh_mat, t_h2o, S_h2o_mat, n_oh, n_h2o, oh_min_ppm=30,
                         t_min_oh=T_MIN_TARGET_OH, t_max_oh=T_MAX_TARGET_OH,
                         t_min_h2o=T_MIN_TARGET_H2O, t_max_h2o=T_MAX_TARGET_H2O,
-                        dt_min_oh=5e-6, dt_min_h2o=5e-06,
+                        dt_min_oh=DT_MIN_OH, dt_min_h2o=DT_MIN_H2O,
                         unit_norm=UNIT_NORM, mag_floor_frac=MAG_FLOOR_FRAC):
     """
     TRUE joint D-optimal selection: every candidate (either species) is scored by
@@ -359,12 +376,19 @@ def run_single(x_vec):
         rxn1 = gas.reaction(IDX_R1)
         rxn1.rate.low_rate = ct.Arrhenius(new_A_R1, NOMINAL_B_R1, new_Ea_R1)
         gas.modify_reaction(IDX_R1, rxn1)
-        # R2 (k2) — simple Arrhenius
-        new_A_R2  = NOMINAL_A_R2 * np.exp(x_vec[2] * LN_F)
-        new_Ea_R2 = (NOMINAL_EA_R2_cal + x_vec[3] * SIGMA_E) * 4184.0
-        rxn2 = gas.reaction(IDX_R2)
-        rxn2.rate = ct.Arrhenius(new_A_R2, NOMINAL_B_R2, new_Ea_R2)
-        gas.modify_reaction(IDX_R2, rxn2)
+        # # R2 (k2) — simple Arrhenius
+        # new_A_R2  = NOMINAL_A_R2 * np.exp(x_vec[2] * LN_F)
+        # new_Ea_R2 = (NOMINAL_EA_R2_cal + x_vec[3] * SIGMA_E) * 4184.0
+        # rxn2 = gas.reaction(IDX_R2)
+        # rxn2.rate = ct.Arrhenius(new_A_R2, NOMINAL_B_R2, new_Ea_R2)
+        # gas.modify_reaction(IDX_R2, rxn2)
+        # R2 (k2) — simple Arrhenius [previous version: NOMINAL_R2 was never defined
+        # since its definition was commented out above, so this raised NameError on
+        # every call and silently failed all simulations via the except Exception below]
+        for (i, A0, b0, Ea0_cal) in NOMINAL_R2:
+            rxn = gas.reaction(i)
+            rxn.rate = ct.Arrhenius(A0 * np.exp(x_vec[2] * LN_F), b0, (Ea0_cal + x_vec[3] * SIGMA_E) * 4184.0)
+            gas.modify_reaction(i, rxn)
         # R5 (k5) — simple Arrhenius (b=2.42 preserved, not optimized)
         new_A_R5  = NOMINAL_A_R5 * np.exp(x_vec[4] * LN_F)
         new_Ea_R5 = (NOMINAL_EA_R5_cal + x_vec[5] * SIGMA_E) * 4184.0
@@ -621,7 +645,8 @@ torch.save({
     'input_dim':        INPUT_DIM,
     'param_names':      PARAM_NAMES,
     'idx_r1':            IDX_R1,
-    'idx_r2':            IDX_R2,
+    # 'idx_r2':            IDX_R2,
+    'idx_r2_all':        IDX_R2_ALL,
     'idx_r5':            IDX_R5,
     'idx_r4':            IDX_R4,
     'nominal_b_r5':      NOMINAL_B_R5,   # needed downstream to rebuild R5's rate

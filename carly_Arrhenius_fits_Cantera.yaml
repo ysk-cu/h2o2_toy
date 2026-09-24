@@ -1,0 +1,48 @@
+generator: cti2yaml
+cantera-version: 2.5.1
+date: Thu, 13 Aug 2026 23:36:22 +0000
+input-files: [carly_Arrhenius_fits_Cantera.cti]
+
+phases:
+- name: gas
+  thermo: ideal-gas
+  elements: [H, O, N, Ar, He, C]
+  species: [H, H2, O, OH, H2O, O2, HO2, H2O2, N2, AR, HE, CO, CO2, O2X,
+    HOOOOH]
+  kinetics: gas
+  reactions: all
+  transport: mixture-averaged
+  state:
+    T: 300.0
+    P: 1.01325e+05
+
+
+reactions:
+- equation: HO2 + HO2 <=> H2O2 + O2  # Reaction 1
+  rate-constant: {A: 793.143247, b: 2.85418458, Ea: -922.968644}
+  duplicate: true
+- equation: HO2 + HO2 <=> H2O2 + O2  # Reaction 2
+  rate-constant: {A: 1.40287606e+15, b: -1.46599397, Ea: -873.576182}
+  duplicate: true
+- equation: HO2 + HO2 <=> O2 + 2 OH  # Reaction 3
+  rate-constant: {A: 2.64940286e+17, b: -1.42708413, Ea: 8491.93445}
+- equation: HOOOOH => 2 HO2  # Reaction 4
+  rate-constant: {A: 1.82077302e+38, b: -8.77288922, Ea: 1.86827733e+04}
+- equation: 2 HO2 => HOOOOH  # Reaction 5
+  rate-constant: {A: 6.21428758e+26, b: -5.95332823, Ea: 1299.50489}
+- equation: HO2 + OH <=> H2O + O2  # Reaction 6
+  rate-constant: {A: 1.23646897e+09, b: 1.22686493, Ea: -2909.7021}
+  duplicate: true
+- equation: HO2 + OH <=> H2O + O2  # Reaction 7
+  rate-constant: {A: -5.75989229e+07, b: 1.42858415, Ea: -3771.09904}
+  duplicate: true
+- equation: HO2 + OH <=> H2O + O2X  # Reaction 8
+  rate-constant: {A: 2111.33923045, b: 2.67589343, Ea: -1297.31029924}
+- equation: 2 OH <=> H2O + O  # Reaction 9
+  rate-constant: {A: 8817.76798, b: 2.51974969, Ea: -2575.40034}
+- equation: 2 OH (+M) <=> H2O2 (+M)  # Reaction 10
+  type: falloff
+  low-P-rate-constant: {A: 3.93967e+25, b: -3.2111376543121644, Ea: 2713.0003607276617}
+  high-P-rate-constant: {A: 3.49105e+12, b: 0.2048623456878356, Ea: 1503.0003607276622}
+  Troe: {A: 0.55, T3: 1.0e-30, T1: 1.0000000000000002e+30, T2: 1.0e+30}
+  efficiencies: {CO2: 3.0, H2O: 10.0, HE: 0.4, N2: 2.0}
