@@ -1,0 +1,107 @@
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:228: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  reactor = ct.IdealGasConstPressureReactor(gas, energy='on')
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:234: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  out[o][k] = observe(reactor.thermo, o)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:275: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f, r.rate.temperature_exponent, r.rate.activation_energy)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:374: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  rr = ct.IdealGasConstPressureReactor(g, energy='on'); net = ct.ReactorNet([rr])
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:377: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  net.advance(t); Ts.append(rr.thermo.T); cs.append(rr.thermo.density_mole * 1e-3)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:395: UserWarning: The balance properties of Sobol' points require n to be a power of 2.
+  base    = sampler.random(n_total)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:430: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn.rate = ct.Arrhenius(A0 * np.exp(x_vec[2] * LN_F), b0, (Ea0_cal + x_vec[3] * SIGMA_E) * 4184.0)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:436: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn5.rate = ct.Arrhenius(new_A_R5, NOMINAL_B_R5, new_Ea_R5)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:442: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn4.rate = ct.Arrhenius(new_A_R4, NOMINAL_B_R4, new_Ea_R4)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:448: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn.rate = ct.Arrhenius(A0 * np.exp(x_vec[8] * LN_F), b0, (Ea0_cal + x_vec[9] * SIGMA_E) * 4184.0)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:452: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  reactor  = ct.IdealGasConstPressureReactor(gas, energy='on')
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:460: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  y_out[_advance_out_idx[k]] = observe(reactor.thermo, _advance_obs[k])
+R1 (k1): H2O2 (+M) <=> 2 OH (+M)   both limits perturbed together, eps_AR = 1 x 2^x
+         low  A=2.490e+21  Ea=48749 cal/mol
+         high A=2.000e+12  b=+0.90  Ea=48749 cal/mol
+R2 (k2) rxn 25: A=7.590e+10  b=+0.00  Ea=7270 cal/mol
+R2 (k2) rxn 26: A=1.700e+09  b=+0.00  Ea=318 cal/mol
+R3 (k3) rxn 19: A=4.200e+11  b=+0.00  Ea=11982 cal/mol
+R3 (k3) rxn 20: A=1.300e+08  b=+0.00  Ea=-1629 cal/mol
+R5 (k5): A=3.340e+01  b=+2.42  Ea=-1930 cal/mol
+R4 (k4): A=2.890e+10  b=+0.00  Ea=-497 cal/mol
+
+Condition 1079: T = 1079 K, P = 3.444 atm, X = {'H2O2': 0.00195, 'AR': 0.99805}
+  observables: ABS215 x7 [1/cm]
+
+Running nominal profiles (1.6 ms, const-P) ...
+  ABS215: start 0.005726  peak 0.006675 at 0.0448 ms  end 0.0002594  [1/cm]
+  ABS215 time window: 1.0 µs to 1.6000 ms
+
+Computing sensitivities ...
+
+ABS215 target probes (window 1.0 µs .. 1.6000 ms, TRUE joint D-optimal, k1/k2/k5/k4/k3):
+  1. ABS215 D-opt @ 0.1139 ms            ABS215 ~ 0.006096 1/cm
+  2. ABS215 D-opt @ 0.2536 ms            ABS215 ~ 0.004652 1/cm
+  3. ABS215 D-opt @ 0.3370 ms            ABS215 ~ 0.003938 1/cm
+  4. ABS215 D-opt @ 0.4294 ms            ABS215 ~ 0.003263 1/cm
+  5. ABS215 D-opt @ 0.7422 ms            ABS215 ~ 0.001699 1/cm
+  6. ABS215 D-opt @ 0.8222 ms            ABS215 ~ 0.001432 1/cm
+  7. ABS215 D-opt @ 0.9886 ms            ABS215 ~ 0.001001 1/cm
+
+Starting fresh: 40000 simulations
+  2000/40000  156.6 sim/s  failed=0
+  4000/40000  154.4 sim/s  failed=0
+  6000/40000  151.9 sim/s  failed=0
+  8000/40000  149.6 sim/s  failed=0
+  10000/40000  147.5 sim/s  failed=0
+  12000/40000  145.4 sim/s  failed=0
+  14000/40000  143.6 sim/s  failed=0
+  16000/40000  141.8 sim/s  failed=0
+  18000/40000  140.2 sim/s  failed=0
+  20000/40000  138.6 sim/s  failed=0
+  22000/40000  137.9 sim/s  failed=0
+  24000/40000  137.3 sim/s  failed=0
+  26000/40000  136.7 sim/s  failed=0
+  28000/40000  136.1 sim/s  failed=0
+  30000/40000  135.6 sim/s  failed=0
+  32000/40000  135.1 sim/s  failed=0
+  34000/40000  134.5 sim/s  failed=0
+  36000/40000  133.9 sim/s  failed=0
+  38000/40000  132.9 sim/s  failed=0
+  40000/40000  131.4 sim/s  failed=0
+
+Shapes: X=(40000, 11)  Y=(40000, 14)  (failed=0)
+  ABS215 outputs: columns 0..13
+Split: train=32000  val=4000  test=4000
+
+Training (1079 K joint ABS215, k1/k2/k5/k4/k3, R1 both_limits, 7-pt ABS215 1us-1.6000ms [fixed, TRUE JOINT D-OPT]) ...
+  ep     1 | train 5.8940e+04 | val 1.2284e+02 | gap 0.002 | wd 5.0e-07 | lr 3.0e-02
+  ep   500 | train 1.0607e-01 | val 1.0871e-01 | gap 1.025 | wd 1.0e-08 | lr 3.0e-02
+  ep  1000 | train 6.4427e-02 | val 6.5927e-02 | gap 1.023 | wd 1.0e-08 | lr 3.0e-02
+  ep  1500 | train 6.3681e-02 | val 5.9422e-02 | gap 0.933 | wd 1.0e-08 | lr 3.0e-02
+  ep  2000 | train 5.0307e-02 | val 4.8702e-02 | gap 0.968 | wd 1.0e-08 | lr 3.7e-03
+  ep  2500 | train 4.9901e-02 | val 4.7718e-02 | gap 0.956 | wd 1.0e-08 | lr 1.9e-03
+  ep  3000 | train 4.9548e-02 | val 4.7610e-02 | gap 0.961 | wd 1.0e-08 | lr 9.4e-04
+  ep  3500 | train 4.9375e-02 | val 4.7307e-02 | gap 0.958 | wd 1.0e-08 | lr 2.3e-04
+  ep  4000 | train 4.9229e-02 | val 4.7261e-02 | gap 0.960 | wd 1.0e-08 | lr 5.9e-05
+  ep  4500 | train 4.9200e-02 | val 4.7223e-02 | gap 0.960 | wd 1.0e-08 | lr 1.5e-05
+  ep  5000 | train 4.9193e-02 | val 4.7222e-02 | gap 0.960 | wd 1.0e-08 | lr 3.7e-06
+Done in 39.3 min.  Best val: 4.7211e-02
+
+========================================================================
+  1079 K Joint (ABS215), 11 inputs (k1 both limits,k2,k5,k4,k3 + eps_AR, TRUE JOINT D-OPT)  |  Zhang Table 1
+========================================================================
+
+ABS215 accuracy:
+  Set 1  sigma=0.1  N=984    H2O2 mean=  0.97% (<= 1%)  p95=  3.49% (<= 2%)  FAIL
+  Set 1  sigma=0.1  N=984    HO2  mean=  1.19% (<= 1%)  p95=  3.32% (<= 2%)  FAIL
+  Set 2  sigma=0.3  N=1004   H2O2 mean=  2.65% (<= 2%)  p95= 11.21% (<= 5%)  FAIL
+  Set 2  sigma=0.3  N=1004   HO2  mean=  3.91% (<= 2%)  p95= 15.17% (<= 5%)  FAIL
+  Set 3  sigma=0.5  N=2012   H2O2 mean=  7.96% (<= 3%)  p95= 37.70% (<= 10%)  FAIL
+  Set 3  sigma=0.5  N=2012   HO2  mean=  8.84% (<= 3%)  p95= 39.95% (<= 10%)  FAIL
+========================================================================
+does NOT meet all Zhang Table 1 requirements.
+
+Saved: result_1079k_train_eps_r3.pt

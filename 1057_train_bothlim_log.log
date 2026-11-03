@@ -1,0 +1,100 @@
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:211: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  reactor = ct.IdealGasConstPressureReactor(gas, energy='on')
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:217: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  out[o][k] = observe(reactor.thermo, o)
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:258: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f, r.rate.temperature_exponent, r.rate.activation_energy)
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:353: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  rr = ct.IdealGasConstPressureReactor(g, energy='on'); net = ct.ReactorNet([rr])
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:356: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  net.advance(t); Ts.append(rr.thermo.T); cs.append(rr.thermo.density_mole * 1e-3)
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:374: UserWarning: The balance properties of Sobol' points require n to be a power of 2.
+  base    = sampler.random(n_total)
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:406: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn.rate = ct.Arrhenius(A0 * np.exp(x_vec[2] * LN_F), b0, (Ea0_cal + x_vec[3] * SIGMA_E) * 4184.0)
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:412: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn5.rate = ct.Arrhenius(new_A_R5, NOMINAL_B_R5, new_Ea_R5)
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:418: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn4.rate = ct.Arrhenius(new_A_R4, NOMINAL_B_R4, new_Ea_R4)
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:428: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  reactor  = ct.IdealGasConstPressureReactor(gas, energy='on')
+/home/yk/h2o2_toy/nn_toy_train_bothlimits.py:436: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  y_out[_advance_out_idx[k]] = observe(reactor.thermo, _advance_obs[k])
+R1 (k1): H2O2 (+M) <=> 2 OH (+M)   both limits perturbed together
+         low  A=2.490e+21  Ea=48749 cal/mol
+         high A=2.000e+12  b=+0.90  Ea=48749 cal/mol
+R2 (k2) rxn 25: A=7.590e+10  b=+0.00  Ea=7270 cal/mol
+R2 (k2) rxn 26: A=1.700e+09  b=+0.00  Ea=318 cal/mol
+R5 (k5): A=3.340e+01  b=+2.42  Ea=-1930 cal/mol
+R4 (k4): A=2.890e+10  b=+0.00  Ea=-497 cal/mol
+
+Condition 1057: T = 1057 K, P = 1.83 atm, X = {'H2O2': 0.00086, 'H2O': 0.00066, 'O2': 0.00033, 'AR': 0.99815}
+  observables: H2O x7 [mole fraction]
+
+Running nominal profiles (6.0 ms, const-P) ...
+  H2O: start 0.00066  peak 0.001509 at 6.0000 ms  end 0.001509  [mole fraction]
+  H2O time window: 1.0 µs to 6.0000 ms
+
+Computing sensitivities ...
+
+H2O target probes (window 1.0 µs .. 6.0000 ms, TRUE joint D-optimal, k1/k2/k5/k4):
+  1. H2O D-opt @ 0.0624 ms               H2O ~ 0.0006921 mole fraction
+  2. H2O D-opt @ 0.3624 ms               H2O ~ 0.0008589 mole fraction
+  3. H2O D-opt @ 0.9774 ms               H2O ~ 0.001104 mole fraction
+  4. H2O D-opt @ 3.3384 ms               H2O ~ 0.001451 mole fraction
+  5. H2O D-opt @ 3.6384 ms               H2O ~ 0.001464 mole fraction
+  6. H2O D-opt @ 5.3220 ms               H2O ~ 0.001503 mole fraction
+  7. H2O D-opt @ 5.6220 ms               H2O ~ 0.001506 mole fraction
+
+Starting fresh: 40000 simulations
+  2000/40000  163.4 sim/s  failed=0
+  4000/40000  161.9 sim/s  failed=0
+  6000/40000  160.2 sim/s  failed=0
+  8000/40000  158.9 sim/s  failed=0
+  10000/40000  157.6 sim/s  failed=0
+  12000/40000  156.1 sim/s  failed=0
+  14000/40000  154.8 sim/s  failed=0
+  16000/40000  153.7 sim/s  failed=0
+  18000/40000  152.5 sim/s  failed=0
+  20000/40000  151.5 sim/s  failed=0
+  22000/40000  150.5 sim/s  failed=0
+  24000/40000  149.7 sim/s  failed=0
+  26000/40000  148.9 sim/s  failed=0
+  28000/40000  148.1 sim/s  failed=0
+  30000/40000  147.3 sim/s  failed=0
+  32000/40000  146.4 sim/s  failed=0
+  34000/40000  145.6 sim/s  failed=0
+  36000/40000  144.7 sim/s  failed=0
+  38000/40000  143.8 sim/s  failed=0
+  40000/40000  142.9 sim/s  failed=0
+
+Shapes: X=(40000, 8)  Y=(40000, 7)  (failed=0)
+  H2O outputs: columns 0..6
+Split: train=32000  val=4000  test=4000
+
+Training (1057 K joint H2O, k1/k2/k5/k4, R1 both_limits, 7-pt H2O 1us-6.0000ms [fixed, TRUE JOINT D-OPT]) ...
+  ep     1 | train 1.3525e+02 | val 9.2218e-01 | gap 0.007 | wd 5.0e-07 | lr 3.0e-02
+  ep   500 | train 1.8505e-02 | val 1.9056e-02 | gap 1.030 | wd 1.0e-08 | lr 1.5e-02
+  ep  1000 | train 7.2876e-03 | val 8.5198e-03 | gap 1.169 | wd 3.2e-07 | lr 7.5e-03
+  ep  1500 | train 2.4435e-03 | val 2.4845e-03 | gap 1.017 | wd 2.0e-08 | lr 3.7e-03
+  ep  2000 | train 1.6637e-03 | val 1.6198e-03 | gap 0.974 | wd 1.0e-08 | lr 9.4e-04
+  ep  2500 | train 1.5362e-03 | val 1.6364e-03 | gap 1.065 | wd 1.0e-08 | lr 4.7e-04
+  ep  3000 | train 1.4891e-03 | val 1.5288e-03 | gap 1.027 | wd 1.0e-08 | lr 1.2e-04
+  ep  3500 | train 1.4822e-03 | val 1.5095e-03 | gap 1.018 | wd 1.0e-08 | lr 5.9e-05
+  ep  4000 | train 1.4761e-03 | val 1.5092e-03 | gap 1.022 | wd 1.0e-08 | lr 2.9e-05
+  ep  4500 | train 1.4740e-03 | val 1.5052e-03 | gap 1.021 | wd 1.0e-08 | lr 1.5e-05
+  ep  5000 | train 1.4724e-03 | val 1.5046e-03 | gap 1.022 | wd 1.0e-08 | lr 1.8e-06
+Done in 37.1 min.  Best val: 1.5043e-03
+
+========================================================================
+  1057 K Joint (H2O), 8 inputs (k1 both limits,k2,k5,k4, TRUE JOINT D-OPT)  |  Zhang Table 1
+========================================================================
+
+H2O accuracy:
+  Set 1  sigma=0.1  N=984    mean=  0.06% (<= 1%)  p95=  0.16% (<= 2%)  PASS
+  Set 2  sigma=0.3  N=1004   mean=  0.12% (<= 2%)  p95=  0.40% (<= 5%)  PASS
+  Set 3  sigma=0.5  N=2012   mean=  0.21% (<= 3%)  p95=  0.67% (<= 10%)  PASS
+========================================================================
+MEETS all Zhang Table 1 requirements.
+
+Saved: result_1057k_train_bothlim.pt

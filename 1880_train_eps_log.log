@@ -1,0 +1,100 @@
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:228: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  reactor = ct.IdealGasConstPressureReactor(gas, energy='on')
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:234: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  out[o][k] = observe(reactor.thermo, o)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:275: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  r.rate = ct.Arrhenius(r.rate.pre_exponential_factor*f, r.rate.temperature_exponent, r.rate.activation_energy)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:374: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  rr = ct.IdealGasConstPressureReactor(g, energy='on'); net = ct.ReactorNet([rr])
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:377: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  net.advance(t); Ts.append(rr.thermo.T); cs.append(rr.thermo.density_mole * 1e-3)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:395: UserWarning: The balance properties of Sobol' points require n to be a power of 2.
+  base    = sampler.random(n_total)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:430: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn.rate = ct.Arrhenius(A0 * np.exp(x_vec[2] * LN_F), b0, (Ea0_cal + x_vec[3] * SIGMA_E) * 4184.0)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:436: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn5.rate = ct.Arrhenius(new_A_R5, NOMINAL_B_R5, new_Ea_R5)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:442: DeprecationWarning: class Arrhenius: To be removed after Cantera 3.2. Replace with 'ArrheniusRate'
+  rxn4.rate = ct.Arrhenius(new_A_R4, NOMINAL_B_R4, new_Ea_R4)
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:452: DeprecationWarning: ReactorBase.__init__: After Cantera 3.2, the default value of the `clone` argument will be `True`, resulting in an independent copy of the `phase` being created for use by this reactor. Add the `clone=False` argument to retain the old behavior of sharing `Solution` objects.
+  reactor  = ct.IdealGasConstPressureReactor(gas, energy='on')
+/home/yk/h2o2_toy/nn_toy_train_lowP_eps.py:460: DeprecationWarning: ReactorBase.thermo: To be removed after Cantera 3.2. Renamed to `phase`.
+  y_out[_advance_out_idx[k]] = observe(reactor.thermo, _advance_obs[k])
+R1 (k1): H2O2 (+M) <=> 2 OH (+M)   both limits perturbed together, eps_AR = 1 x 2^x
+         low  A=2.490e+21  Ea=48749 cal/mol
+         high A=2.000e+12  b=+0.90  Ea=48749 cal/mol
+R2 (k2) rxn 25: A=7.590e+10  b=+0.00  Ea=7270 cal/mol
+R2 (k2) rxn 26: A=1.700e+09  b=+0.00  Ea=318 cal/mol
+R5 (k5): A=3.340e+01  b=+2.42  Ea=-1930 cal/mol
+R4 (k4): A=2.890e+10  b=+0.00  Ea=-497 cal/mol
+
+Condition 1880: T = 1880 K, P = 1.74 atm, X = {'H2O': 0.013, 'O2': 0.009899999999999999, 'H': 7e-07, 'AR': 0.9770993}
+  observables: OH x7 [mole fraction]
+
+Running nominal profiles (1.0 ms, const-P) ...
+  OH: start 2.1e-08  peak 1.72e-05 at 1.0000 ms  end 1.72e-05  [mole fraction]
+  OH time window: 1.0 µs to 1.0000 ms
+
+Computing sensitivities ...
+
+OH target probes (window 1.0 µs .. 1.0000 ms, TRUE joint D-optimal, k1/k2/k5/k4):
+  1. OH D-opt @ 0.2421 ms                OH ~ 5.126e-06 mole fraction
+  2. OH D-opt @ 0.3210 ms                OH ~ 6.4e-06 mole fraction
+  3. OH D-opt @ 0.3710 ms                OH ~ 7.203e-06 mole fraction
+  4. OH D-opt @ 0.6152 ms                OH ~ 1.11e-05 mole fraction
+  5. OH D-opt @ 0.6652 ms                OH ~ 1.189e-05 mole fraction
+  6. OH D-opt @ 0.8070 ms                OH ~ 1.414e-05 mole fraction
+  7. OH D-opt @ 0.9930 ms                OH ~ 1.709e-05 mole fraction
+
+Starting fresh: 40000 simulations
+  2000/40000  170.7 sim/s  failed=0
+  4000/40000  171.2 sim/s  failed=0
+  6000/40000  170.2 sim/s  failed=0
+  8000/40000  169.0 sim/s  failed=0
+  10000/40000  167.6 sim/s  failed=0
+  12000/40000  166.3 sim/s  failed=0
+  14000/40000  165.0 sim/s  failed=0
+  16000/40000  163.8 sim/s  failed=0
+  18000/40000  162.6 sim/s  failed=0
+  20000/40000  161.4 sim/s  failed=0
+  22000/40000  160.1 sim/s  failed=0
+  24000/40000  159.0 sim/s  failed=0
+  26000/40000  157.9 sim/s  failed=0
+  28000/40000  156.8 sim/s  failed=0
+  30000/40000  155.5 sim/s  failed=0
+  32000/40000  154.3 sim/s  failed=0
+  34000/40000  153.1 sim/s  failed=0
+  36000/40000  151.9 sim/s  failed=0
+  38000/40000  150.7 sim/s  failed=0
+  40000/40000  149.4 sim/s  failed=0
+
+Shapes: X=(40000, 9)  Y=(40000, 7)  (failed=0)
+  OH outputs: columns 0..6
+Split: train=32000  val=4000  test=4000
+
+Training (1880 K joint OH, k1/k2/k5/k4, R1 both_limits, 7-pt OH 1us-1.0000ms [fixed, TRUE JOINT D-OPT]) ...
+  ep     1 | train 2.1817e+04 | val 1.3318e+01 | gap 0.001 | wd 5.0e-07 | lr 3.0e-02
+  ep   500 | train 8.2298e-02 | val 8.0304e-02 | gap 0.976 | wd 1.0e-08 | lr 3.0e-02
+  ep  1000 | train 2.0925e-02 | val 2.4036e-02 | gap 1.149 | wd 8.0e-08 | lr 1.5e-02
+  ep  1500 | train 1.2449e-02 | val 2.1252e-02 | gap 1.707 | wd 8.0e-08 | lr 3.7e-03
+  ep  2000 | train 5.5621e-03 | val 5.8138e-03 | gap 1.045 | wd 1.0e-08 | lr 3.7e-03
+  ep  2500 | train 5.6234e-03 | val 5.0518e-03 | gap 0.898 | wd 1.0e-08 | lr 1.9e-03
+  ep  3000 | train 4.7772e-03 | val 4.8034e-03 | gap 1.005 | wd 1.0e-08 | lr 9.4e-04
+  ep  3500 | train 4.7361e-03 | val 4.6453e-03 | gap 0.981 | wd 1.0e-08 | lr 4.7e-04
+  ep  4000 | train 4.6102e-03 | val 4.6036e-03 | gap 0.999 | wd 1.0e-08 | lr 2.3e-04
+  ep  4500 | train 4.5761e-03 | val 4.4387e-03 | gap 0.970 | wd 1.0e-08 | lr 5.9e-05
+  ep  5000 | train 4.5690e-03 | val 4.4411e-03 | gap 0.972 | wd 1.0e-08 | lr 2.9e-05
+Done in 39.3 min.  Best val: 4.4284e-03
+
+========================================================================
+  1880 K Joint (OH), 9 inputs (k1 both limits,k2,k5,k4 + eps_AR, TRUE JOINT D-OPT)  |  Zhang Table 1
+========================================================================
+
+OH accuracy:
+  Set 1  sigma=0.1  N=984    mean=  0.15% (<= 1%)  p95=  0.46% (<= 2%)  PASS
+  Set 2  sigma=0.3  N=1004   mean=  0.34% (<= 2%)  p95=  1.05% (<= 5%)  PASS
+  Set 3  sigma=0.5  N=2012   mean=  0.66% (<= 3%)  p95=  2.13% (<= 10%)  PASS
+========================================================================
+MEETS all Zhang Table 1 requirements.
+
+Saved: result_1880k_train_eps.pt
