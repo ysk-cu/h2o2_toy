@@ -118,6 +118,13 @@ LN_F_SHO2     = 0.7 / SIG_PRIOR_X   # HO2 cross section x exp(x LN_F_SHO2): prio
 LN_F_PATH     = 0.1 / SIG_PRIOR_X   # path / mixture factor x exp(x LN_F_PATH): prior sd 0.1
 CAL_FRAC      = 0.05                # first 5 % of the record calibrates the path length
 
+# Observed value at a target time: local linear fit over the scattered record,
+# Gaussian weights of width max(SMOOTH_FRAC * t, distance to the SMOOTH_K-th
+# nearest point) -- a local average rather than a line through two points.
+# A wider window (larger K) biases the sparse 1192 K OH peak by ~-9 %
+SMOOTH_FRAC   = 0.10
+SMOOTH_K      = 2
+
 # Zhang's thresholds
 F_THRESHOLD   = 1.0      # |F| > 1 : inconsistent data point
 CHI_X         = 0.05     # freezing test on the A factor multiplier
@@ -317,7 +324,26 @@ class Condition:
             self.y_obs[o] = a[col].values * scale
 
     def _log_interp(self, o, t):
-        y = np.interp(t, self.t_obs[o], self.y_obs[o])
+        """Observed value at time t: Gaussian-weighted local linear fit of the
+        scattered record (a smooth local average), bandwidth
+        h = max(SMOOTH_FRAC*t, distance to the SMOOTH_K-th nearest point).
+        Where the record has no point within 2h on one side of t (a gap, or the
+        record end) a local line would extrapolate, so the two neighbouring
+        points are interpolated instead."""
+        ts, ys = self.t_obs[o], self.y_obs[o]
+        d = ts - t
+        h = max(SMOOTH_FRAC * max(t, 0.0), np.sort(np.abs(d))[min(SMOOTH_K, len(d)) - 1], 1e-12)
+        near = np.abs(d) < 2 * h
+        if not ((d[near] < 0).any() and (d[near] > 0).any()):
+            y = np.interp(t, ts, ys)
+        else:
+            w = np.exp(-0.5 * (d / h) ** 2)
+            s0, s1, s2 = w.sum(), (w * d).sum(), (w * d * d).sum()
+            det = s0 * s2 - s1 * s1
+            if det > 1e-12 * s0 * s2:
+                y = (s2 * (w * ys).sum() - s1 * (w * d * ys).sum()) / det
+            else:
+                y = (w * ys).sum() / s0
         return np.log(np.clip(y + LOG_EPS, NOISE_FLOOR, None))
 
     def log_obs(self, tau_us):
@@ -973,7 +999,8 @@ def make_figure(conds, eval_keys, fit_keys, x, Sigma, taus, path, band):
                 sds[o] = np.sqrt(np.einsum("ti,ij,tj->t", J, Sigma, J))
         tau = taus.get(key, 0.0)
         yt_all = np.exp(c.log_obs(tau))
-        eu = lambda y, s: y*s*(np.exp(2*SIG_LOG)-1); ed = lambda y, s: y*s*(1-np.exp(-2*SIG_LOG))
+        ys_all = np.exp(c.nn_log(x))                     # surrogate at the targets, optimized x
+        eu =lambda y, s: y*s*(np.exp(2*SIG_LOG)-1); ed = lambda y, s: y*s*(1-np.exp(-2*SIG_LOG))
         held = key not in fit_keys
         for col in range(ncol):
             ax = axes[row][col]
@@ -993,6 +1020,10 @@ def make_figure(conds, eval_keys, fit_keys, x, Sigma, taus, path, band):
             ax.plot(tg_*1e3, p_nom[o]*sc, "r--", lw=1.5, alpha=0.7, label="nominal")
             ax.plot(tg_*1e3, p_opt[o]*sc, "b-", lw=2.5,
                     label="prediction" if held else "optimized")
+            # markers only: the surrogate exists at the target times alone, a line
+            # between them would be interpolation, not a model prediction
+            ax.plot(tt*1e3, ys_all[sel]*sc, "D", mfc="gold", mec="k", ms=7, zorder=5,
+                    label="surrogate at targets")
             if sd is not None:
                 ax.fill_between(tg_*1e3, p_opt[o]*sc*np.exp(-2*sd), p_opt[o]*sc*np.exp(2*sd),
                                 color="steelblue", alpha=0.2, label=r"$\pm2\sigma$")
