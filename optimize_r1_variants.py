@@ -12,9 +12,9 @@
 #
 # Targets (LaGrotta et al. 2023 SI):
 #   1192, 1398 K : Hong et al. 2010 OH + H2O         (hong_*.csv)
-#   1057 K       : Hong et al. 2009 H2O              (si_data/1057K_H2O.csv,  Fig. S3)
-#   1880 K       : Hong et al. 2010 OH               (si_data/1880K_OH.csv,   Fig. S4)
-#   968 .. 1218 K: Kappel et al. 2002 215 nm absorbance (si_data/<T>K_ABS215.csv, S5-S9)
+#   1057 K       : Hong et al. 2009 H2O              (si_data/1057_h2o.csv,  Fig. S3)
+#   1880 K       : Hong et al. 2010 OH               (si_data/1880_oh.csv,   Fig. S4)
+#   968 .. 1218 K: Kappel et al. 2002 215 nm absorbance (si_data/<T>_abs215.csv, S5-S9)
 # For the absorbance the surrogate gives H2O2 and HO2 at the target times and the
 # absorbance is formed here (absorbance.py), with two kinds of extra active
 # parameters: a shared HO2 cross-section scale (prior sd 0.7 in ln, as
@@ -60,20 +60,20 @@ CONDITIONS = {
                  data=dict(OH="hong_1398K_oh.csv", H2O="hong_1398K_h2o.csv")),
     "1057": dict(label="1057 K / 1.83 atm",  T=1057.0, P_atm=1.83,
                  X0={"H2O2": 860e-6, "H2O": 660e-6, "O2": 330e-6},
-                 data=dict(H2O=f"{DATA_DIR}/1057K_H2O.csv")),
+                 data=dict(H2O=f"{DATA_DIR}/1057_h2o.csv")),
     "1880": dict(label="1880 K / 1.74 atm",  T=1880.0, P_atm=1.74,
                  X0={"H2O": 13000e-6, "O2": 9900e-6, "H": 0.7e-6},
-                 data=dict(OH=f"{DATA_DIR}/1880K_OH.csv")),
+                 data=dict(OH=f"{DATA_DIR}/1880_oh.csv")),
     "968":  dict(label="968 K / 3.59 atm",   T=968.0,  P_atm=3.59,  X0={"H2O2": 3140e-6},
-                 data=dict(ABS215=f"{DATA_DIR}/968K_ABS215.csv")),
+                 data=dict(ABS215=f"{DATA_DIR}/968_abs215.csv")),
     "1015": dict(label="1015 K / 3.298 atm", T=1015.0, P_atm=3.298, X0={"H2O2": 3260e-6},
-                 data=dict(ABS215=f"{DATA_DIR}/1015K_ABS215.csv")),
+                 data=dict(ABS215=f"{DATA_DIR}/1015_abs215.csv")),
     "1079": dict(label="1079 K / 3.444 atm", T=1079.0, P_atm=3.444, X0={"H2O2": 1950e-6},
-                 data=dict(ABS215=f"{DATA_DIR}/1079K_ABS215.csv")),
+                 data=dict(ABS215=f"{DATA_DIR}/1079_abs215.csv")),
     "1132": dict(label="1132 K / 3.55 atm",  T=1132.0, P_atm=3.55,  X0={"H2O2": 1360e-6},
-                 data=dict(ABS215=f"{DATA_DIR}/1132K_ABS215.csv")),
+                 data=dict(ABS215=f"{DATA_DIR}/1132_abs215.csv")),
     "1218": dict(label="1218 K / 3.038 atm", T=1218.0, P_atm=3.038, X0={"H2O2": 1710e-6},
-                 data=dict(ABS215=f"{DATA_DIR}/1218K_ABS215.csv")),
+                 data=dict(ABS215=f"{DATA_DIR}/1218_abs215.csv")),
 }
 DATA_COLUMN = {"OH": ("[OH] ppm", 1e-6), "H2O": ("[H2O] ppm", 1e-6), "ABS215": ("Absorbance", 1.0)}
 for _k, _c in CONDITIONS.items():
@@ -306,6 +306,11 @@ class Condition:
             col, scale = DATA_COLUMN[o]
             df = pd.read_csv(f, skipinitialspace=True)
             df.columns = [c.strip() for c in df.columns]
+            try:                                   # headerless digitized file: time [ms], value
+                float(df.columns[0])
+                df = pd.read_csv(f, header=None, names=["Time [ms]", col], skipinitialspace=True)
+            except ValueError:
+                pass
             self.df[o] = df
             a = df.groupby("Time [ms]")[col].mean().reset_index()
             self.t_obs[o] = a["Time [ms]"].values * 1e-3
