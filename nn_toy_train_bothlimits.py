@@ -34,10 +34,13 @@ import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader, random_split
 from scipy.stats import qmc, norm
 from r1_falloff import R1Falloff
-from absorbance import observe, OBS_UNITS, OBS_COLUMNS
+from absorbance import observe, read_record, OBS_UNITS, OBS_COLUMNS
 
 R1_SCHEME = 'both_limits'   # recorded in the result file; optimize_r1_variants.py reads it
-WITH_R3   = len(sys.argv) > 2 and sys.argv[2].lower() == 'r3'
+FLAGS     = {a.lower() for a in sys.argv[2:]}
+WITH_R3   = 'r3' in FLAGS
+WITH_TPM  = 'tpm' in FLAGS              # T, P and every initial mole fraction as inputs
+AT_DATA   = 'dp' in FLAGS or WITH_TPM   # target times restricted to measured data times
 
 SEED = 42
 np.random.seed(SEED)
@@ -137,11 +140,28 @@ CONDITIONS = {
     '1057': dict(T=1057, P_atm=1.83,  ppm=dict(H2O2=860,  H2O=660,  O2=330), obs=dict(H2O=(7, 6e-3))),     # T3
     '1880': dict(T=1880, P_atm=1.74,  ppm=dict(H2O=13000, O2=9900,  H=0.7),  obs=dict(OH=(7, 1e-3)),       # T4
                  oh_min_ppm=5.0),
-    '968':  dict(T=968,  P_atm=3.59,  ppm=dict(H2O2=3140), obs=dict(ABS215=(7, 1.6e-3))),                  # T5
-    '1015': dict(T=1015, P_atm=3.298, ppm=dict(H2O2=3260), obs=dict(ABS215=(7, 1.6e-3))),                  # T6
+    '968':  dict(T=968,  P_atm=3.59,  ppm=dict(H2O2=3140), obs=dict(ABS215=(7, 1.45e-3))),                 # T5 (record end excluded,
+    '1015': dict(T=1015, P_atm=3.298, ppm=dict(H2O2=3260), obs=dict(ABS215=(7, 1.45e-3))),                 # T6  end of test time)
     '1079': dict(T=1079, P_atm=3.444, ppm=dict(H2O2=1950), obs=dict(ABS215=(7, 1.6e-3))),                  # T7
     '1132': dict(T=1132, P_atm=3.55,  ppm=dict(H2O2=1360), obs=dict(ABS215=(7, 0.6e-3))),                  # T8 (near noise level after 0.6 ms)
     '1218': dict(T=1218, P_atm=3.038, ppm=dict(H2O2=1710), obs=dict(ABS215=(7, 0.3e-3))),                  # T9 (noise level after 0.3 ms)
+}
+# Measured records behind each observable (time [ms], value); 'dp' picks targets among their times
+DATA = {
+    '1192': dict(OH='hong_1192K_oh.csv', H2O='hong_1192K_h2o.csv'),
+    '1398': dict(OH='hong_1398K_oh.csv', H2O='hong_1398K_h2o.csv'),
+    '1057': dict(H2O='si_data/1057_h2o.csv'),
+    '1880': dict(OH='si_data/1880_oh.csv'),
+    **{k: dict(ABS215=f'si_data/{k}_abs215.csv') for k in ('968', '1015', '1079', '1132', '1218')},
+}
+# Prior uncertainties of the physical model parameters, 2 sigma in ln (LaGrotta et al.
+# 2023 SI Table S1; their main-text Table 2 row for 1057 K repeats the 1880 K row)
+UNC = {
+    '1192': dict(T=0.01, P=0.02, H2O2=0.05, H2O=0.05, O2=0.05),
+    '1398': dict(T=0.01, P=0.02, H2O2=0.05, H2O=0.05, O2=0.05),
+    '1057': dict(T=0.01, P=0.02, H2O2=0.05, H2O=0.05, O2=0.05),
+    '1880': dict(T=0.01, P=0.02, H2O=0.10, O2=0.01, H=2.303),
+    **{k: dict(T=0.02, P=0.04, H2O2=0.10) for k in ('968', '1015', '1079', '1132', '1218')},
 }
 COND = sys.argv[1] if len(sys.argv) > 1 else '1192'
 if COND not in CONDITIONS:
@@ -151,11 +171,44 @@ T_INITIAL = _c['T']
 P_INITIAL = _c['P_atm'] * ct.one_atm
 INITIAL_X = {s: v * 1e-6 for s, v in _c['ppm'].items()}
 INITIAL_X['AR'] = 1.0 - sum(INITIAL_X.values())
+
+# Physical model parameters of this condition as extra inputs, after the shared rate
+# inputs: value = nominal * exp(x * ln f), ln f = the 2-sigma uncertainty above.
+# 'tpm': T, P and every initial mole fraction.  'dp': the initial H atom fraction only
+# (the 1880 K mixture), whose uncertainty (x10) is far larger than the others'.
+_u = UNC[COND]
+if WITH_TPM:
+    COND_PARAMS = ([('lnT', 'T', None, _u['T']), ('lnP', 'P', None, _u['P'])]
+                   + [(f'lnX_{s}', 'X', s, _u[s]) for s in _c['ppm']])
+elif AT_DATA:
+    COND_PARAMS = [(f'lnX_{s}', 'X', s, _u[s]) for s in _c['ppm'] if s == 'H']
+else:
+    COND_PARAMS = []
+N_SHARED    = INPUT_DIM                 # rate (and eps) inputs, shared by every condition
+PARAM_NAMES = PARAM_NAMES + [p[0] for p in COND_PARAMS]
+INPUT_DIM   = len(PARAM_NAMES)
+
+
+def _initial_state(x_vec):
+    """Initial T [K], P [Pa], X of the reactor for input vector x_vec."""
+    T, P, X = T_INITIAL, P_INITIAL, dict(INITIAL_X)
+    for k, (_n, kind, sp, lnf) in enumerate(COND_PARAMS):
+        f = np.exp(x_vec[N_SHARED + k] * lnf)
+        if kind == 'T':
+            T *= f
+        elif kind == 'P':
+            P *= f
+        else:
+            X[sp] *= f
+    X['AR'] = 1.0 - sum(v for s, v in X.items() if s != 'AR')
+    return T, P, X
 OBS       = list(_c['obs'])                          # observables, in output-column order
 N_OBS     = {o: _c['obs'][o][0] for o in OBS}
 T_MAX_OBS = {o: _c['obs'][o][1] for o in OBS}
 print(f'\nCondition {COND}: T = {T_INITIAL} K, P = {_c["P_atm"]} atm, X = {INITIAL_X}')
 print(f'  observables: ' + ', '.join(f'{o} x{N_OBS[o]} [{OBS_UNITS[o]}]' for o in OBS))
+if COND_PARAMS:
+    print('  physical model inputs: ' + ', '.join(f'{n} (ln f {lnf:g})' for n, _k, _s, lnf in COND_PARAMS))
 
 # Nominal grid for target selection: 1 ms (or the longest target window) in
 # 10000 steps -- 0.1 us resolution for the 1192 / 1398 K conditions
@@ -186,7 +239,8 @@ wd_gap_low     = 1.02
 # Per-observable loss weight
 WEIGHT_OBS = {o: 1.0 for o in OBS}
 
-RUN_TAG         = 'bothlim_r3' if WITH_R3 else 'bothlim'
+RUN_TAG         = ('bothlim' + ('_r3' if WITH_R3 else '') + ('_tpm' if WITH_TPM
+                   else '_dp' if AT_DATA else ''))
 CHECKPOINT_PATH = f'ckpt_{COND}k_train_{RUN_TAG}.pt'
 RESULT_PATH     = f'result_{COND}k_train_{RUN_TAG}.pt'
 # smoke-test overrides (environment), e.g.  NN_SAMPLES=300 NN_EPOCHS=20
@@ -237,6 +291,17 @@ def _floor(o):
     return -np.inf
 FLOOR = {o: _floor(o) for o in OBS}
 
+# 'dp': candidate targets are the measured times inside the window (each mapped to its
+# grid cell for the sensitivity rows; the target itself is the exact measured time)
+if AT_DATA:
+    DATA_AT_CELL = {}
+    for o in OBS:
+        t_d = read_record(DATA[COND][o], o)[0]
+        t_d = t_d[(t_d >= T_MIN_TARGET) & (t_d <= T_MAX_OBS[o])]
+        cell = np.clip(np.rint(t_d / DT_FINE).astype(int) - 1, 0, N_FINE - 1)
+        DATA_AT_CELL[o] = dict(zip(cell.tolist(), t_d.tolist()))
+        print(f'  {o}: {len(t_d)} measured times in the window, {len(DATA_AT_CELL[o])} candidate cells')
+
 # ── FIXED TIME WINDOWING (match train3) ─────────────────────────────────────────
 # Time windows are fixed to prevent picking targets deep in the decay (for OH)
 # or past the experimental data horizon.
@@ -277,7 +342,8 @@ def select_targets_joint(t_grid, S_mats, n_targets,
     """
     cand, S_use, norms = {}, {}, {}
     for o in OBS:
-        win  = np.where((t_grid >= T_MIN_TARGET) & (t_grid <= T_MAX_OBS[o]))[0]
+        win  = (np.array(sorted(DATA_AT_CELL[o]), dtype=int) if AT_DATA else
+                np.where((t_grid >= T_MIN_TARGET) & (t_grid <= T_MAX_OBS[o]))[0])
         meas = np.where(_nom[o] >= FLOOR[o])[0]
         cand[o] = np.intersect1d(win, meas)
         # Row magnitudes: used for the seed (always), the optional magnitude floor,
@@ -320,7 +386,15 @@ def select_targets_joint(t_grid, S_mats, n_targets,
 
 
 _idx = select_targets_joint(T_FINE, S, N_OBS)
-TARGET_TIMES = {o: T_FINE[_idx[o]] for o in OBS}
+# with targets restricted to measured times a sparse record can leave too few
+# admissible candidates at the 5 % spacing: halve the spacing until enough remain
+while AT_DATA and any(len(_idx[o]) < N_OBS[o] for o in OBS) and min(DT_MIN_OBS.values()) > 1e-9:
+    DT_MIN_OBS = {o: v / 2 for o, v in DT_MIN_OBS.items()}
+    print(f'  too few admissible targets; minimum spacing halved to '
+          + ', '.join(f'{o} {v*1e6:.2f} us' for o, v in DT_MIN_OBS.items()))
+    _idx = select_targets_joint(T_FINE, S, N_OBS)
+TARGET_TIMES = {o: (np.array([DATA_AT_CELL[o][i] for i in _idx[o]]) if AT_DATA else T_FINE[_idx[o]])
+                for o in OBS}
 assert all(len(TARGET_TIMES[o]) == N_OBS[o] for o in OBS), (
     f'target selection returned {[len(TARGET_TIMES[o]) for o in OBS]} targets, '
     f'expected {[N_OBS[o] for o in OBS]} -- the net would train on garbage columns.')
@@ -424,7 +498,7 @@ def run_single(x_vec):
                 rxn.rate = ct.Arrhenius(A0 * np.exp(x_vec[8] * LN_F), b0, (Ea0_cal + x_vec[9] * SIGMA_E) * 4184.0)
                 gas.modify_reaction(i, rxn)
 
-        gas.TPX = T_INITIAL, P_INITIAL, INITIAL_X
+        gas.TPX = _initial_state(x_vec)        # nominal unless physical model inputs are active
         reactor  = ct.IdealGasConstPressureReactor(gas, energy='on')
         net      = ct.ReactorNet([reactor])
 
@@ -669,6 +743,9 @@ torch.save({
     'r1_scheme':        R1_SCHEME,        # 'both_limits'; older files lack it = low limit only
     'eps':              None,             # no efficiency knob in this variant
     'condition':        dict(key=COND, T=T_INITIAL, P_atm=P_INITIAL / ct.one_atm, X=INITIAL_X),
+    'n_shared':         N_SHARED,         # inputs shared by all conditions (rate, eps)
+    'cond_params':      COND_PARAMS,      # this condition's inputs: (name, 'T'|'P'|'X', species, ln f)
+    'target_at_data':   AT_DATA,          # targets are measured times: compare to the raw value
     'cantera_version':  ct.__version__,
     'train_losses':     train_losses,
     'val_losses':       val_losses,

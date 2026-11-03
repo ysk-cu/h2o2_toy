@@ -44,6 +44,26 @@ def abs215_per_cm(x_h2o2, x_ho2, T, c_tot, s_ho2=1.0):
     return c_tot * (sigma_h2o2_215(T) * x_h2o2 + s_ho2 * sigma_ho2_215(T) * x_ho2)
 
 
+DATA_COLUMN = {'OH': ('[OH] ppm', 1e-6), 'H2O': ('[H2O] ppm', 1e-6), 'ABS215': ('Absorbance', 1.0)}
+
+
+def read_record(path, obs):
+    """Measured record of `obs`: sorted unique times [s] and values in model units
+    (mole fraction, or absorbance), duplicate times averaged. Reads both the Hong
+    files (header 'Time [ms]', '[OH] ppm') and headerless digitized ones."""
+    import pandas as pd
+    col, scale = DATA_COLUMN[obs]
+    df = pd.read_csv(path, skipinitialspace=True)
+    df.columns = [c.strip() for c in df.columns]
+    try:                                   # headerless digitized file: time [ms], value
+        float(df.columns[0])
+        df = pd.read_csv(path, header=None, names=['Time [ms]', col], skipinitialspace=True)
+    except ValueError:
+        pass
+    a = df.groupby('Time [ms]')[df.columns[1]].mean().reset_index()
+    return a['Time [ms]'].values * 1e-3, a[df.columns[1]].values * scale, df
+
+
 def observe(ph, name):
     """Value of a species mole fraction or of ABS215 [1/cm] for the Cantera phase
     `ph` (e.g. reactor.thermo)."""

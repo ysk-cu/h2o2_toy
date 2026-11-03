@@ -41,7 +41,8 @@ warnings.filterwarnings("ignore", message=".*Arrhenius.*")
 warnings.filterwarnings("ignore", message=".*ReactorBase.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="scipy.stats._qmc")
 from r1_falloff import R1Falloff
-from absorbance import sigma_h2o2_215, sigma_ho2_215
+from absorbance import (sigma_h2o2_215, sigma_ho2_215, read_record, DATA_COLUMN,
+                        SIG_H2O2_215, SIG_HO2_215)
 
 #   CONFIGURATION
 MECHANISM = "chem_cti_toy_model_ogog.yaml"
@@ -75,7 +76,6 @@ CONDITIONS = {
     "1218": dict(label="1218 K / 3.038 atm", T=1218.0, P_atm=3.038, X0={"H2O2": 1710e-6},
                  data=dict(ABS215=f"{DATA_DIR}/1218_abs215.csv")),
 }
-DATA_COLUMN = {"OH": ("[OH] ppm", 1e-6), "H2O": ("[H2O] ppm", 1e-6), "ABS215": ("Absorbance", 1.0)}
 for _k, _c in CONDITIONS.items():
     _c["result"] = f"result_{_k}k_train_{RESULT_TAG}.pt"
 
@@ -107,16 +107,24 @@ ANALYSIS = dict(
     uncertainty_band      = True,   # 2-sigma band on the figures (adds Cantera runs)
 )
 
-# Priors and experimental uncertainty
-SIG_LOG       = 0.05     # experimental uncertainty
+# Data-set weighting (argv[3]): 'dataset' (default) as LaGrotta et al. 2023 Eq. 2,
+# z_i = sigma_i * sqrt(n) with n the number of targets of that species trace, so each
+# trace counts as about one measurement; 'indep' weights every target by sigma_i alone
+WEIGHTING = sys.argv[3] if len(sys.argv) > 3 else "dataset"
+assert WEIGHTING in ("dataset", "indep"), f"weighting {WEIGHTING!r}: use dataset or indep"
+
+# Priors and experimental uncertainty. Every uncertainty quoted in LaGrotta et al.
+# 2023 (Table 2) is 2 sigma; a parameter is nominal x exp(x ln f) with ln f its 2-sigma
+# value, so x = +-1 is 2 sigma and the prior sd of x is SIG_PRIOR_X = 0.5.
+SIG_OBS       = {"OH": 0.025, "H2O": 0.025, "ABS215": 0.05}   # 1 sigma in ln (Table 2: 0.05, 0.1)
 SIG_PRIOR_X   = 0.5      # prior sd of the normalized parameters -> lambda = 4
 TAU_PRIOR_US  = 2.0      # prior sd of the OH trigger offset, microseconds
 TAU_BOUND_US  = 6.0
 
-# Absorbance parameters, x normalized like the rate parameters (prior sd SIG_PRIOR_X)
-LN_F_SHO2     = 0.7 / SIG_PRIOR_X   # HO2 cross section x exp(x LN_F_SHO2): prior sd 0.7 in ln
-LN_F_PATH     = 0.1 / SIG_PRIOR_X   # path / mixture factor x exp(x LN_F_PATH): prior sd 0.1
-CAL_FRAC      = 0.05                # first 5 % of the record calibrates the path length
+# Absorbance parameters, same normalization (ln f = 2-sigma value)
+LN_F_SHO2     = 0.7      # HO2 cross section x exp(x LN_F_SHO2): sigma'_1,HO2 (0.7)
+LN_F_PATH     = 0.1      # path / mixture factor (only where M_H2O2 is not itself active)
+CAL_FRAC      = 0.05     # first 5 % of the record calibrates the path length
 
 # Observed value at a target time: local linear fit over the scattered record,
 # Gaussian weights of width max(SMOOTH_FRAC * t, distance to the SMOOTH_K-th
@@ -142,17 +150,36 @@ MOL_UNITS = ct.UnitSystem({
     "pressure": "dyn / cm^2", "energy": "erg", "temperature": "K",
     "current": "A", "activation-energy": "cal / mol"})
 
-# Extra (non-surrogate) parameters appended to x, shared by every condition so x
-# has one layout: (name, ln f).  Filled in main() from the conditions in FIT.
-AUX = []
+# Global layout of x, the same for every condition: the shared surrogate inputs
+# (rate parameters, eps), then each condition's physical model inputs (T, P, initial
+# mole fractions; '<name>_<key>'), then parameters outside the surrogates (absorbance).
+# LAYOUT: list of (name, ln f, kind) with kind 'shared' | 'cond' | 'aux'.  Filled in
+# main() from the result files of the conditions in FIT (build_layout).
+LAYOUT = []
+GIDX = {}
 
 
-def aux_layout(keys):
-    abs_keys = [k for k in keys if "ABS215" in CONDITIONS[k]["data"]]
-    if not abs_keys:
-        return []
-    return ([("lnS_HO2_215", LN_F_SHO2)]
-            + [(f"lnL_{k}", LN_F_PATH) for k in abs_keys])
+def build_layout(keys):
+    """x layout from the result files: shared inputs of the first, then each
+    condition's own inputs, then the absorbance parameters."""
+    LAYOUT.clear(); GIDX.clear()
+    cks = {k: torch.load(CONDITIONS[k]["result"], weights_only=False) for k in keys}
+    c0 = cks[keys[0]]
+    n_sh = int(c0.get("n_shared", c0["input_dim"]))
+    for n in list(c0["param_names"])[:n_sh]:
+        LAYOUT.append((n, None, "shared"))
+    abs_keys = []
+    for k in keys:
+        for (n, kind, sp, lnf) in cks[k].get("cond_params", []):
+            LAYOUT.append((f"{n}_{k}", float(lnf), "cond"))
+        if "ABS215" in CONDITIONS[k]["data"]:
+            abs_keys.append(k)
+    if abs_keys:
+        LAYOUT.append(("lnS_HO2_215", LN_F_SHO2, "aux"))
+        for k in abs_keys:           # the path factor stands in for M_H2O2 where that is not active
+            if not any(cp[2] == "H2O2" for cp in cks[k].get("cond_params", [])):
+                LAYOUT.append((f"lnL_{k}", LN_F_PATH, "aux"))
+    GIDX.update({n: i for i, (n, _f, _k) in enumerate(LAYOUT)})
 
 
 class Tee:
@@ -208,12 +235,22 @@ class Condition:
         self.ie = int(self.eps["index"]) if self.eps else None
         self.ln_f_eps = float(self.eps["ln_f_eps"]) if self.eps else None
 
-        # x = [surrogate inputs, AUX]; every condition shares this layout
-        self.aux = list(AUX)
-        self.param_names = self.rate_names + [n for n, _ in self.aux]
-        self.nx = len(self.param_names)
-        self.aux_idx = {n: self.input_dim + i for i, (n, _) in enumerate(self.aux)}
-        self.aux_lnf = {n: f for n, f in self.aux}
+        # x follows the global LAYOUT: the surrogate reads the shared inputs and this
+        # condition's own physical model inputs (T, P, X), in the order of its result file
+        self.n_shared = int(ck.get("n_shared", self.input_dim))
+        self.param_names = [n for n, _f, _k in LAYOUT]
+        self.nx = len(LAYOUT)
+        assert self.param_names[:self.n_shared] == self.rate_names[:self.n_shared], \
+            f"{key}: shared inputs {self.rate_names[:self.n_shared]} differ from the layout"
+        self.cond_params = [(GIDX[f"{n}_{key}"], kind, sp, float(lnf))
+                            for (n, kind, sp, lnf) in ck.get("cond_params", [])]
+        self.nn_idx = list(range(self.n_shared)) + [g for g, *_r in self.cond_params]
+        assert len(self.nn_idx) == self.input_dim
+        self.aux_idx = {n: GIDX[n] for n, _f, kd in LAYOUT
+                        if kd == "aux" and (n == "lnS_HO2_215" or n == f"lnL_{key}")}
+        self.cp_of = {kind if kind != "X" else f"X_{sp}": g for g, kind, sp, _l in self.cond_params}
+        # targets at measured times: compared with the raw value, no trigger offset
+        self.at_data = bool(ck.get("target_at_data", False))
 
         # Surrogate columns: files written by the generalized training scripts carry
         # target_obs / target_species / target_times; older files have OH then H2O.
@@ -240,11 +277,8 @@ class Condition:
                 jh = [j for j in js if col_sp[j] == "H2O2"]
                 jr = [j for j in js if col_sp[j] == "HO2"]
                 for k, (a, b) in enumerate(zip(jh, jr)):
-                    T = float(obs_T[o][k])
                     self.targets.append(dict(obs=o, t=col_t[a], cols=(a, b),
-                                             ctot=float(obs_c[o][k]),
-                                             sh=float(sigma_h2o2_215(T)),
-                                             sr=float(sigma_ho2_215(T))))
+                                             ctot=float(obs_c[o][k]), Tn=float(obs_T[o][k])))
             else:
                 for j in js:
                     self.targets.append(dict(obs=o, t=col_t[j], cols=(j,)))
@@ -253,6 +287,12 @@ class Condition:
         self.is_oh = np.array([t["obs"] == "OH" for t in self.targets])
         self.n_oh = int(self.is_oh.sum())
         self.t_tgt = np.array([t["t"] for t in self.targets])
+        # sig: 1-sigma data uncertainty (consistency test); z: the residual weight,
+        # sig * sqrt(n) per species trace with dataset weighting (LaGrotta Eq. 2)
+        self.sig = np.array([SIG_OBS[t["obs"]] for t in self.targets])
+        n_tr = {o: sum(t["obs"] == o for t in self.targets) for o in self.obs_list}
+        self.z = self.sig * (np.sqrt([n_tr[t["obs"]] for t in self.targets])
+                             if WEIGHTING == "dataset" else 1.0)
 
         # Reaction table
         def branches_of(idxs):
@@ -262,14 +302,14 @@ class Condition:
         r2 = ck["idx_r2_all"] if "idx_r2_all" in ck else ck["idx_r2"]
         spec.append(("R2", branches_of(r2), False))
         spec.append(("R5", branches_of(ck["idx_r5"]), False))
-        if self.input_dim >= 8 and ("idx_r4" in ck):
+        if self.n_shared >= 8 and ("idx_r4" in ck):
             spec.append(("R4", branches_of(ck["idx_r4"]), False))
         if "idx_r3_all" in ck:
             spec.append(("R3", branches_of(ck["idx_r3_all"]), False))
         self.n_rate = 2 * len(spec)                 # (A, Ea) pairs come first in x
         n_extra = 1 if self.eps else 0
-        assert self.n_rate + n_extra == self.input_dim, \
-            f"{len(spec)} reactions x 2 + {n_extra} != input_dim {self.input_dim}"
+        assert self.n_rate + n_extra == self.n_shared, \
+            f"{len(spec)} reactions x 2 + {n_extra} != shared inputs {self.n_shared}"
         assert [n[4:] for n in self.rate_names[:self.n_rate:2]] == [s[0] for s in spec], \
             f"parameter order {self.rate_names} does not match reactions {[s[0] for s in spec]}"
         if self.eps:
@@ -299,7 +339,7 @@ class Condition:
 
         self._load_data(cfg["data"])
         self.mask = np.ones(self.n_tot, dtype=bool)
-        self.use_tau = True
+        self.use_tau = not self.at_data
         self.use_surrogate = True
         self.active_idx = list(range(self.nx))
         self._gas = None
@@ -310,27 +350,21 @@ class Condition:
     def _load_data(self, files):
         self.df, self.t_obs, self.y_obs = {}, {}, {}
         for o, f in files.items():
-            col, scale = DATA_COLUMN[o]
-            df = pd.read_csv(f, skipinitialspace=True)
-            df.columns = [c.strip() for c in df.columns]
-            try:                                   # headerless digitized file: time [ms], value
-                float(df.columns[0])
-                df = pd.read_csv(f, header=None, names=["Time [ms]", col], skipinitialspace=True)
-            except ValueError:
-                pass
-            self.df[o] = df
-            a = df.groupby("Time [ms]")[col].mean().reset_index()
-            self.t_obs[o] = a["Time [ms]"].values * 1e-3
-            self.y_obs[o] = a[col].values * scale
+            self.t_obs[o], self.y_obs[o], self.df[o] = read_record(f, o)
 
     def _log_interp(self, o, t):
-        """Observed value at time t: Gaussian-weighted local linear fit of the
+        """Observed value at time t. A target at a measured time (surrogates trained
+        with 'dp') takes that raw value. Otherwise: Gaussian-weighted local linear fit of the
         scattered record (a smooth local average), bandwidth
         h = max(SMOOTH_FRAC*t, distance to the SMOOTH_K-th nearest point).
         Where the record has no point within 2h on one side of t (a gap, or the
         record end) a local line would extrapolate, so the two neighbouring
         points are interpolated instead."""
         ts, ys = self.t_obs[o], self.y_obs[o]
+        j = int(np.searchsorted(ts, t))
+        for jj in (j - 1, j):
+            if 0 <= jj < len(ts) and abs(ts[jj] - t) < 1e-12:
+                return np.log(np.clip(ys[jj] + LOG_EPS, NOISE_FLOOR, None))
         d = ts - t
         h = max(SMOOTH_FRAC * max(t, 0.0), np.sort(np.abs(d))[min(SMOOTH_K, len(d)) - 1], 1e-12)
         near = np.abs(d) < 2 * h
@@ -366,7 +400,7 @@ class Condition:
         if self.n_oh == 0:
             return 0.0
         d = self.dlog_obs_dtau(0.0)[self.is_oh]
-        return float(np.mean(np.abs(d)) * TAU_PRIOR_US / SIG_LOG)
+        return float(np.mean(np.abs(d)) * TAU_PRIOR_US / SIG_OBS["OH"])
 
     def tau_leverage_crit(self):
         n = max(int(self.mask[self.is_oh].sum()), 1)
@@ -376,19 +410,46 @@ class Condition:
     def _combine(self, cols, x):
         """Log targets from the log surrogate columns (torch, differentiable in both)."""
         out = []
+        if "ABS215" in self.obs_list:
+            s = torch.exp(x[self.aux_idx["lnS_HO2_215"]] * LN_F_SHO2)
+            lnL = self.lnL0 + (x[self.aux_idx[f"lnL_{self.key}"]] * LN_F_PATH
+                               if f"lnL_{self.key}" in self.aux_idx else 0.0)
+            # active initial T / P: the gas temperature and c = P/RT along the profile
+            # scale with them (the nominal T(t), c(t) come from the training script)
+            lfT = x[self.cp_of["T"]] * self._lnf(self.cp_of["T"]) if "T" in self.cp_of else 0.0
+            lfP = x[self.cp_of["P"]] * self._lnf(self.cp_of["P"]) if "P" in self.cp_of else 0.0
         for tg in self.targets:
             if tg["obs"] == "ABS215":
                 a, b = tg["cols"]
-                s = torch.exp(x[self.aux_idx["lnS_HO2_215"]] * LN_F_SHO2)
-                lnL = self.lnL0 + x[self.aux_idx[f"lnL_{self.key}"]] * LN_F_PATH
-                out.append(torch.log(tg["ctot"] * (tg["sh"] * torch.exp(cols[a])
-                                                   + s * tg["sr"] * torch.exp(cols[b]))) + lnL)
+                T = tg["Tn"] * torch.exp(torch.as_tensor(lfT, dtype=torch.float64))
+                c = tg["ctot"] * torch.exp(torch.as_tensor(lfP - lfT, dtype=torch.float64))
+                sh = SIG_H2O2_215[0] + SIG_H2O2_215[1] * T
+                sr = SIG_HO2_215[0] * torch.exp(-T / SIG_HO2_215[1])
+                out.append(torch.log(c * (sh * torch.exp(cols[a]) + s * sr * torch.exp(cols[b]))) + lnL)
             else:
                 out.append(cols[tg["cols"][0]])
         return torch.stack(out)
 
+    def _lnf(self, g):
+        return LAYOUT[g][1]
+
+    def initial_state(self, x):
+        """Initial T [K], P [Pa], X for parameter vector x (the physical model inputs
+        of this condition, nominal where they are not active)."""
+        T, P, X = self.T, self.P, dict(self.X0)
+        for g, kind, sp, lnf in self.cond_params:
+            f = float(np.exp(x[g] * lnf))
+            if kind == "T":
+                T *= f
+            elif kind == "P":
+                P *= f
+            else:
+                X[sp] *= f
+        X["AR"] = 1.0 - sum(v for s_, v in X.items() if s_ != "AR")
+        return T, P, X
+
     def _nn_targets_t(self, z):
-        cols = self.model(z[:self.input_dim].float()).double()
+        cols = self.model(z[self.nn_idx].float()).double()
         return self._combine(cols, z)
 
     # surrogate
@@ -475,11 +536,11 @@ class Condition:
     def cantera_cols(self, x):
         """The surrogate's columns (log mole fractions) from the full model. Cached
         on the rate parameters, so derivatives in the absorbance parameters are free."""
-        key = np.asarray(x[:self.input_dim], float).tobytes()
+        key = np.asarray(x[self.nn_idx], float).tobytes()
         if self._col_cache[0] == key:
             return self._col_cache[1]
         gas = self.perturb_gas(x)
-        gas.TPX = self.T, self.P, self.X0
+        gas.TPX = self.initial_state(x)
         rr = ct.IdealGasConstPressureReactor(gas, energy="on")
         net = ct.ReactorNet([rr])
         sidx = [gas.species_index(s) for s in self.col_sp]
@@ -525,7 +586,7 @@ class Condition:
         """Each observable on its grid; the absorbance includes the cross-section
         scale and the path length (or is per cm with per_cm=True)."""
         gas = self.perturb_gas(x)
-        gas.TPX = self.T, self.P, self.X0
+        gas.TPX = self.initial_state(x)
         rr = ct.IdealGasConstPressureReactor(gas, energy="on")
         net = ct.ReactorNet([rr])
         names = list(grids)
@@ -535,7 +596,8 @@ class Condition:
         vals = np.empty(len(allt))
         if "ABS215" in grids and not per_cm:
             s = np.exp(x[self.aux_idx["lnS_HO2_215"]] * LN_F_SHO2)
-            L = np.exp(self.lnL0 + x[self.aux_idx[f"lnL_{self.key}"]] * LN_F_PATH)
+            L = np.exp(self.lnL0 + (x[self.aux_idx[f"lnL_{self.key}"]] * LN_F_PATH
+                                    if f"lnL_{self.key}" in self.aux_idx else 0.0))
         else:
             s, L = 1.0, 1.0
         for k in order:
@@ -615,7 +677,7 @@ def make_residual(fit_conds):
     """
     z = [ x_active , tau_c for conditions carrying one ]
 
-    r = [ per-condition (log y_pred - log y_obs)/SIG_LOG , masked ]
+    r = [ per-condition (log y_pred - log y_obs)/z , masked ]   (z = sig, or sig*sqrt(n))
         [ x_active / SIG_PRIOR_X ]      <-- ONCE, not once per condition
         [ tau_c / TAU_PRIOR_US ]
 
@@ -639,7 +701,7 @@ def make_residual(fit_conds):
     def residual(z):
         x = expand(z[:NA]); parts = []
         for c in fit_conds:
-            r = (c.nn_log(x) - c.log_obs(tau_of(c, z))) / SIG_LOG
+            r = (c.nn_log(x) - c.log_obs(tau_of(c, z))) / c.z
             parts.append(r[c.mask])
         parts.append(x[act] / SIG_PRIOR_X)
         if NT:
@@ -649,10 +711,10 @@ def make_residual(fit_conds):
     def jac(z):
         x = expand(z[:NA]); rows = []
         for c in fit_conds:
-            J = c.nn_jac(x)[:, act] / SIG_LOG
+            J = c.nn_jac(x)[:, act] / c.z[:, None]
             T = np.zeros((c.n_tot, NT))
             if c.use_tau:
-                T[:, slot[c.key]] = -c.dlog_obs_dtau(tau_of(c, z)) / SIG_LOG
+                T[:, slot[c.key]] = -c.dlog_obs_dtau(tau_of(c, z)) / c.z
             rows.append(np.hstack([J, T])[c.mask])
         rows.append(np.hstack([np.eye(NA) / SIG_PRIOR_X, np.zeros((NA, NT))]))
         if NT:
@@ -714,16 +776,16 @@ def unpack(sol, fit_conds, act, tau_conds, jac):
 
 def f_scores(cond, x, tau, source):
     """Zhang Eq. 13:  F = (y_obs - y_opt) / (2 sigma_obs). |F| > 1 = inconsistent.
-    Relative to the residual r = (y_pred - y_obs)/SIG_LOG this is simply F = -r/2."""
+    sigma_obs is the 1-sigma data uncertainty, without the data-set weighting."""
     y = cond.nn_log(x) if source == "nn" else cond.cantera_targets(x)
-    return (cond.log_obs(tau) - y) / (2.0 * SIG_LOG)
+    return (cond.log_obs(tau) - y) / (2.0 * cond.sig)
 
 
 def fit_tau_only(cond, x, source="cantera"):
-    if cond.n_oh == 0:
+    if cond.n_oh == 0 or cond.at_data:
         return 0.0
     y = cond.nn_log(x) if source == "nn" else cond.cantera_targets(x)
-    r = lambda t: np.concatenate([(y - cond.log_obs(t[0])) / SIG_LOG,
+    r = lambda t: np.concatenate([(y - cond.log_obs(t[0])) / cond.z,
                                   [t[0] / TAU_PRIOR_US]])
     s = least_squares(r, [0.0], bounds=([-TAU_BOUND_US], [TAU_BOUND_US]), method="trf")
     return float(s.x[0])
@@ -747,8 +809,8 @@ def lnf_of(c, k):
     """ln f of parameter k: its value is nominal x exp(x_k ln f)."""
     if c.eps is not None and k == c.ie:
         return c.ln_f_eps
-    if k >= c.input_dim:
-        return c.aux_lnf[c.param_names[k]]
+    if LAYOUT[k][2] != "shared":
+        return LAYOUT[k][1]
     return c.ln_f
 
 
@@ -756,9 +818,12 @@ def phys_label(c, k, v):
     """Physical meaning of a displacement v of parameter k."""
     if c.eps is not None and k == c.ie:
         return f"eps_{c.eps['species']} x {np.exp(v*c.ln_f_eps):.4f}"
-    if k >= c.input_dim:
-        what = ("HO2 cross section" if c.param_names[k] == "lnS_HO2_215"
-                else "path length / mixture")
+    if LAYOUT[k][2] != "shared":
+        n = c.param_names[k]
+        base, key = n[2:].rsplit("_", 1)                   # 'lnX_H2O2_1192' -> 'X_H2O2', '1192'
+        what = ("HO2 cross section" if n == "lnS_HO2_215"
+                else "path length / mixture" if n.startswith("lnL_")
+                else f"{base} ({key} K)")
         return f"{what} x {np.exp(v*lnf_of(c, k)):.4f}"
     return (f"A factor x {np.exp(v*c.ln_f):.4f}" if k % 2 == 0
             else f"Ea {v*c.sigma_e:+.0f} cal/mol")
@@ -928,7 +993,7 @@ def report_consistency(conds, fit_conds, eval_keys, fit_keys, x, taus, with_cant
             line = f"      {lab:<18}{Fn[i]:>+15.3f}"
             if with_cantera:
                 line += (f"{Fc[i]:>+14.3f}{Fc[i]-Fn[i]:>+12.3f}"
-                         f"{np.exp(2*ref*SIG_LOG):>10.3f}")
+                         f"{np.exp(2*ref*c.sig[i]):>10.3f}")
             print(line + f"   {st}" + ("" if c.mask[i] else "  [removed]"))
         ref = Fc if with_cantera else Fn
         mx = float(np.abs(ref).max())
@@ -936,9 +1001,9 @@ def report_consistency(conds, fit_conds, eval_keys, fit_keys, x, taus, with_cant
               + ("   all data points consistent" if mx < F_THRESHOLD
                  else "   AT LEAST ONE DATA POINT CANNOT BE RECONCILED"))
         if with_cantera:
-            d = float(np.abs(Fc - Fn).max())
+            i_d = int(np.argmax(np.abs(Fc - Fn))); d = float(abs(Fc[i_d] - Fn[i_d]))
             print(f"      largest surrogate contribution to |F| = {d:.3f} "
-                  f"({100*(np.exp(2*d*SIG_LOG)-1):.1f}% error in the predicted value)")
+                  f"({100*(np.exp(2*d*c.sig[i_d])-1):.1f}% error in the predicted value)")
             if d > 0.2 * F_THRESHOLD:
                 print("      warning: the surrogate accounts for a noticeable part of "
                       "the F value; judge consistency on the Cantera column only")
@@ -950,12 +1015,21 @@ def report_consistency(conds, fit_conds, eval_keys, fit_keys, x, taus, with_cant
     return worst, store
 
 
-def report_chi2(fit_conds, sol, n_free):
+def data_chi2(fit_conds, x, taus):
+    """Sum of ((y_pred - y_obs)/sigma_obs)^2 over the kept targets (surrogate),
+    without the data-set weighting -- the chi-square statistic of the data."""
+    return float(sum(np.sum((2.0 * f_scores(c, x, taus.get(c.key, 0.0), "nn")[c.mask]) ** 2)
+                     for c in fit_conds))
+
+
+def report_chi2(fit_conds, x, taus, n_free):
     n_data = sum(int(c.mask.sum()) for c in fit_conds)
-    S = float(np.sum(sol.fun[:n_data] ** 2))
+    S = data_chi2(fit_conds, x, taus)
     lo = max(n_data - n_free, 1); hi = n_data
     sub("overall goodness of fit")
-    print(f"      sum of squared data residuals = {S:.3f} over {n_data} data points")
+    print(f"      sum of squared data residuals = {S:.3f} over {n_data} data points"
+          + ("  (unweighted: the fit itself weights each trace by 1/sqrt(n))"
+             if WEIGHTING == "dataset" else ""))
     print(f"      effective degrees of freedom between {lo} (prior weak) and "
           f"{hi} (prior strong)")
     print(f"      chi-square 95% critical value: {chi2.ppf(0.95, lo):.2f} .. "
@@ -989,7 +1063,9 @@ def make_figure(conds, eval_keys, fit_keys, x, Sigma, taus, path, band):
         if band:
             EPS = 1e-3
             Jp = {o: np.zeros((len(grids[o]), NX)) for o in grids}
-            for k in range(NX):
+            # only this condition's surrogate inputs and absorbance parameters move its
+            # profiles; every other column of the Jacobian is exactly zero
+            for k in sorted(set(c.nn_idx) | set(c.aux_idx.values())):
                 d = np.zeros(NX); d[k] = EPS
                 pp, pm = c.run_profiles(x + d, grids), c.run_profiles(x - d, grids)
                 for o in grids:
@@ -1000,7 +1076,7 @@ def make_figure(conds, eval_keys, fit_keys, x, Sigma, taus, path, band):
         tau = taus.get(key, 0.0)
         yt_all = np.exp(c.log_obs(tau))
         ys_all = np.exp(c.nn_log(x))                     # surrogate at the targets, optimized x
-        eu =lambda y, s: y*s*(np.exp(2*SIG_LOG)-1); ed = lambda y, s: y*s*(1-np.exp(-2*SIG_LOG))
+        sig_o = {o: SIG_OBS[o] for o in c.obs_list}
         held = key not in fit_keys
         for col in range(ncol):
             ax = axes[row][col]
@@ -1015,7 +1091,9 @@ def make_figure(conds, eval_keys, fit_keys, x, Sigma, taus, path, band):
             dsc = sc * DATA_COLUMN[o][1]
             ax.plot(c.df[o]["Time [ms]"], c.df[o][dcol] * dsc, "o", mfc="none", mec="k",
                     ms=4, alpha=0.4, label="experiment")
-            ax.errorbar(tt*1e3, yt*sc, yerr=[ed(yt, sc), eu(yt, sc)], fmt="none", ecolor="k",
+            so = sig_o[o]
+            ax.errorbar(tt*1e3, yt*sc, yerr=[yt*sc*(1-np.exp(-2*so)), yt*sc*(np.exp(2*so)-1)],
+                        fmt="none", ecolor="k",
                         elinewidth=1.5, capsize=4, label=r"targets $\pm2\sigma$")
             ax.plot(tg_*1e3, p_nom[o]*sc, "r--", lw=1.5, alpha=0.7, label="nominal")
             ax.plot(tg_*1e3, p_opt[o]*sc, "b-", lw=2.5,
@@ -1049,7 +1127,7 @@ def main():
     t_start = time.time()
     stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     outdir = (f"analysis_{'_'.join(FIT) if len(FIT) <= 3 else f'{len(FIT)}cond'}"
-              f"_{RESULT_TAG}_{stamp}")
+              f"_{RESULT_TAG}{'_indep' if WEIGHTING == 'indep' else ''}_{stamp}")
     os.makedirs(outdir, exist_ok=True)
     tee = Tee(os.path.join(outdir, "analysis.log"))
     sys.stdout = tee
@@ -1061,17 +1139,21 @@ def main():
     print(f"  conditions    : {', '.join(FIT)} K")
     print(f"  output        : {outdir}/")
     print("=" * 78)
-    print(f"\n  experimental uncertainty (log space)  : {SIG_LOG}")
+    print(f"\n  experimental uncertainty (1 sigma, ln): "
+          + ", ".join(f"{o} {v}" for o, v in SIG_OBS.items()) + "  (LaGrotta Table 2 / 2)")
+    print(f"  data-set weighting                    : "
+          + ("z = sigma*sqrt(n) per species trace (LaGrotta Eq. 2)" if WEIGHTING == "dataset"
+             else "none: every target weighted by sigma alone"))
     print(f"  prior sd of normalized parameters     : {SIG_PRIOR_X}  "
           f"(lambda = {1/SIG_PRIOR_X**2:.0f})")
     print(f"  prior sd of the OH trigger offset     : {TAU_PRIOR_US} us")
     print(f"  inconsistency threshold               : |F| > {F_THRESHOLD}")
 
-    AUX[:] = aux_layout(FIT)
+    build_layout(FIT)
     conds = {k: Condition(k) for k in FIT}
     fit_conds = [conds[k] for k in FIT]
     results = dict(run=stamp, mechanism=MECHANISM, fit=FIT, result_tag=RESULT_TAG,
-                   sig_log=SIG_LOG, sig_prior_x=SIG_PRIOR_X,
+                   sig_obs=SIG_OBS, weighting=WEIGHTING, sig_prior_x=SIG_PRIOR_X,
                    lam=1/SIG_PRIOR_X**2, tau_prior_us=TAU_PRIOR_US,
                    path_length_cm={c.key: float(np.exp(c.lnL0)) for c in fit_conds
                                    if "ABS215" in c.obs_list})
@@ -1085,7 +1167,7 @@ def main():
             print(f"      {c.label:<20} {c.result_path}   "
                   + ", ".join(f"{sum(t['obs'] == o for t in c.targets)} {o}" for o in c.obs_list)
                   + f" targets, hidden {c.hidden}, best val loss {c.best_val:.3e}")
-            assert c.param_names == ref.param_names, "parameter order differs"
+            assert c.rate_names[:c.n_shared] == ref.rate_names[:ref.n_shared], "parameter order differs"
             assert abs(c.ln_f - ref.ln_f) < 1e-10, "LN_F differs; x is not the same variable"
             assert abs(c.sigma_e - ref.sigma_e) < 1e-6, "SIGMA_E differs"
             assert c.r1_scheme == ref.r1_scheme, "R1 scheme differs between surrogates"
@@ -1093,7 +1175,11 @@ def main():
             if c.eps is not None:
                 assert c.eps["species"] == ref.eps["species"] and \
                     abs(c.ln_f_eps - ref.ln_f_eps) < 1e-10, "eps knob definition differs"
-        print(f"      shared parameters: {ref.param_names}")
+        print(f"      shared parameters: {ref.param_names[:ref.n_shared]}")
+        for c in fit_conds:
+            if c.cond_params:
+                print(f"      {c.label:<20} physical model parameters: "
+                      + ", ".join(f"{ref.param_names[g]} (ln f {l:g})" for g, _k, _s, l in c.cond_params))
         print(f"      LN_F = {ref.ln_f:.6f}, SIGMA_E = {ref.sigma_e:.0f} cal/mol")
         print(f"      R1 scheme: {ref.r1_scheme}"
               + (f"   + eps_{ref.eps['species']} knob, f = {np.exp(ref.ln_f_eps):g}, "
@@ -1146,7 +1232,11 @@ def main():
         worst_probe = 0.0
         for c in fit_conds:
             print(f"      {c.label}")
-            for lab, z in probes:
+            own = []
+            for g, _k, _s, _l in c.cond_params:   # this condition's physical model inputs
+                p = np.zeros(NX); p[g] = 0.6
+                own.append((f"{c.param_names[g].rsplit('_', 1)[0]} = +0.6", p))
+            for lab, z in probes + own:
                 gap = np.abs(np.exp(c.nn_log(z) - c.cantera_targets(z)) - 1.0) * 100
                 worst_probe = max(worst_probe, gap.max())
                 print(f"        {lab:<16} largest {gap.max():5.2f}%   "
@@ -1163,15 +1253,16 @@ def main():
 
     #  decide which conditions carry a trigger offset
     for c in fit_conds:
-        c.use_tau = c.n_oh > 0 and c.tau_leverage() >= c.tau_leverage_crit()
+        c.use_tau = (not c.at_data) and c.n_oh > 0 and c.tau_leverage() >= c.tau_leverage_crit()
 
     #  2. joint optimization
     head(2, "OPTIMIZATION")
     n_data = sum(c.n_tot for c in fit_conds)
     n_tau = sum(1 for c in fit_conds if c.use_tau)
     NXp = fit_conds[0].nx
-    print(f"\n  {n_data} data points, {fit_conds[0].input_dim} rate parameters "
-          f"+ {NXp - fit_conds[0].input_dim} absorbance parameters "
+    n_kind = {kd: sum(1 for _n, _f, k2 in LAYOUT if k2 == kd) for kd in ("shared", "cond", "aux")}
+    print(f"\n  {n_data} data points, {n_kind['shared']} rate parameters "
+          f"+ {n_kind['cond']} physical model parameters + {n_kind['aux']} absorbance parameters "
           f"+ {n_tau} trigger offsets = {NXp + n_tau} unknowns")
     if n_data <= NXp + n_tau:
         print("  WARNING: there are no more data points than unknowns. The result is")
@@ -1180,7 +1271,7 @@ def main():
     x, Sigma, cov, taus = unpack(sol, fit_conds, act, tau_conds, jac)
     print(f"      objective value (Zhang Eq. 8) = {2*sol.cost:.6f}")
     pinfo = report_parameters(conds, fit_conds, x, Sigma, taus, tau_conds)
-    S_data, n_pts = report_chi2(fit_conds, sol, len(act) + n_tau)
+    S_data, n_pts = report_chi2(fit_conds, x, taus, len(act) + n_tau)
     results.update(param_names=fit_conds[0].param_names, r1_scheme=fit_conds[0].r1_scheme, eps=fit_conds[0].eps, x_opt=x.tolist(),
                    Sigma=Sigma.tolist(), tau_us=taus, objective=2*sol.cost,
                    sum_sq_data_residuals=S_data, n_data_points=n_pts, **pinfo)
@@ -1264,8 +1355,8 @@ def main():
                 c.active_idx = [k for k in full_idx if k not in frozen]
             s_, _, j_, a_, t_ = solve(fit_conds, n_restart=max(4, N_RESTARTS//4),
                                       quiet=True)
-            nd = sum(int(c.mask.sum()) for c in fit_conds)
-            Sf = float(np.sum(s_.fun[:nd] ** 2))
+            xf, _S, _c, tf = unpack(s_, fit_conds, a_, t_, j_)
+            Sf = data_chi2(fit_conds, xf, tf)
             rise = Sf - S_data
             p = 1.0 - chi2.cdf(max(rise, 0.0), dof)
             verd = ("significant" if p < 0.05 else "NOT significant, freeze it")
