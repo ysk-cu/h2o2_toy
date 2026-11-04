@@ -15,7 +15,7 @@ esac
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-4}
 mkdir -p logs
 for v in bothlim bothlim_r3 eps eps_r3; do
-  for w in dataset indep; do
+  for w in dataset; do
     ( $PY optimize_r1_variants.py ${v}_$MODE $CONDS $w > logs/opt_${STAGE}_${v}_${w}.out 2>&1
       echo "$STAGE ${v}_$MODE $w exit=$?" ) &
   done

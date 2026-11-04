@@ -1,0 +1,1356 @@
+==============================================================================
+  H2O2 RATE PARAMETER OPTIMIZATION -- FULL ANALYSIS
+  run at        : 2026-11-04 18:40:49
+  mechanism     : chem_cti_toy_model_ogog.yaml
+  conditions    : 1192, 1398, 1057, 968, 1015, 1079, 1132, 1218 K
+  output        : analysis_8cond_bothlim_r3_dp_20261104_184049/
+==============================================================================
+
+  experimental uncertainty (1 sigma, ln): OH 0.025, H2O 0.025, ABS215 0.05  (LaGrotta Table 2 / 2)
+  data-set weighting                    : z = sigma*sqrt(n) per species trace (LaGrotta Eq. 2)
+  prior sd of normalized parameters     : 0.5  (lambda = 4)
+  prior sd of the OH trigger offset     : 2.0 us
+  inconsistency threshold               : |F| > 1.0
+
+==============================================================================
+  [1]  SETUP AND VALIDATION
+==============================================================================
+
+  --- surrogate files -----------------------------------------------------
+      1192 K / 1.95 atm    result_1192k_train_bothlim_r3_dp.pt   4 OH, 3 H2O targets, hidden 32, best val loss 4.068e-02
+      1398 K / 1.91 atm    result_1398k_train_bothlim_r3_dp.pt   4 OH, 3 H2O targets, hidden 32, best val loss 4.331e-02
+      1057 K / 1.83 atm    result_1057k_train_bothlim_r3_dp.pt   7 H2O targets, hidden 32, best val loss 2.092e-03
+      968 K / 3.59 atm     result_968k_train_bothlim_r3_dp.pt   7 ABS215 targets, hidden 32, best val loss 1.372e-02
+      1015 K / 3.298 atm   result_1015k_train_bothlim_r3_dp.pt   7 ABS215 targets, hidden 32, best val loss 2.340e-02
+      1079 K / 3.444 atm   result_1079k_train_bothlim_r3_dp.pt   7 ABS215 targets, hidden 32, best val loss 4.886e-02
+      1132 K / 3.55 atm    result_1132k_train_bothlim_r3_dp.pt   7 ABS215 targets, hidden 32, best val loss 4.662e-02
+      1218 K / 3.038 atm   result_1218k_train_bothlim_r3_dp.pt   7 ABS215 targets, hidden 32, best val loss 4.942e-02
+      shared parameters: ['lnA_R1', 'Ea_R1', 'lnA_R2', 'Ea_R2', 'lnA_R5', 'Ea_R5', 'lnA_R4', 'Ea_R4', 'lnA_R3', 'Ea_R3']
+      LN_F = 2.302585, SIGMA_E = 5000 cal/mol
+      R1 scheme: both_limits
+      968 K / 3.59 atm     nominal path length 32.63 cm (first 5% of the record vs the nominal model)
+      1015 K / 3.298 atm   nominal path length 34.47 cm (first 5% of the record vs the nominal model)
+      1079 K / 3.444 atm   nominal path length 38.54 cm (first 5% of the record vs the nominal model)
+      1132 K / 3.55 atm    nominal path length 41.73 cm (first 5% of the record vs the nominal model)
+      1218 K / 3.038 atm   nominal path length 40.97 cm (first 5% of the record vs the nominal model)
+
+  --- mechanism content ---------------------------------------------------
+      R1: H2O2 (+M) <=> 2 OH (+M)          1 branch(es) at [21]   falloff, both limits perturbed together
+      R2: H2O2 + OH <=> H2O + HO2          2 branch(es) at [25, 26]
+      R5: 2 OH <=> H2O + O                 1 branch(es) at [4]
+      R4: HO2 + OH <=> H2O + O2            1 branch(es) at [18]
+      R3: 2 HO2 <=> H2O2 + O2              2 branch(es) at [19, 20]
+      at 968 K: k(R1) = 3331, k(R2) = 3.174e+09, k(R5) = 1.532e+09, k(R4) = 3.742e+10, k(R3) = 1.131e+09
+      at 1015 K: k(R1) = 9658, k(R2) = 3.517e+09, k(R5) = 1.64e+09, k(R4) = 3.698e+10, k(R3) = 1.397e+09
+      at 1057 K: k(R1) = 2.299e+04, k(R2) = 3.844e+09, k(R5) = 1.742e+09, k(R4) = 3.661e+10, k(R3) = 1.681e+09
+      at 1079 K: k(R1) = 3.519e+04, k(R2) = 4.023e+09, k(R5) = 1.797e+09, k(R4) = 3.644e+10, k(R3) = 1.85e+09
+      at 1132 K: k(R1) = 9.137e+04, k(R2) = 4.473e+09, k(R5) = 1.935e+09, k(R4) = 3.605e+10, k(R3) = 2.31e+09
+      at 1192 K: k(R1) = 2.415e+05, k(R2) = 5.013e+09, k(R5) = 2.1e+09, k(R4) = 3.565e+10, k(R3) = 2.928e+09
+      at 1218 K: k(R1) = 3.566e+05, k(R2) = 5.256e+09, k(R5) = 2.174e+09, k(R4) = 3.549e+10, k(R3) = 3.229e+09
+      at 1398 K: k(R1) = 3.473e+06, k(R2) = 7.059e+09, k(R5) = 2.739e+09, k(R4) = 3.456e+10, k(R3) = 5.859e+09
+
+  --- perturbation is an exact multiplicative factor on k(T) --------------
+      A common A factor and a common Ea shift on every duplicate branch
+      must give  k'(T)/k(T) = exp(x_A*LN_F - x_Ea*SIGMA_E/RT) exactly.
+      R1 @968 K (low-P limit)  k'/k = 14.17555986  expected 14.17555986  dev 1.0e-15  ok
+      R1 @968 K (high-P limit) k'/k = 14.17555986  expected 14.17555986  dev 7.8e-16  ok
+      R1 @1015 K (low-P limit)  k'/k = 13.50925692  expected 13.50925692  dev 4.4e-16  ok
+      R1 @1015 K (high-P limit) k'/k = 13.50925692  expected 13.50925692  dev 6.7e-16  ok
+      R1 @1057 K (low-P limit)  k'/k = 12.98734201  expected 12.98734201  dev 1.1e-16  ok
+      R1 @1057 K (high-P limit) k'/k = 12.98734201  expected 12.98734201  dev 1.8e-15  ok
+      R1 @1079 K (low-P limit)  k'/k = 12.73763821  expected 12.73763821  dev 2.2e-16  ok
+      R1 @1079 K (high-P limit) k'/k = 12.73763821  expected 12.73763821  dev 3.7e-15  ok
+      R1 @1132 K (low-P limit)  k'/k = 12.19334136  expected 12.19334136  dev 2.2e-16  ok
+      R1 @1132 K (high-P limit) k'/k = 12.19334136  expected 12.19334136  dev 1.1e-16  ok
+      R1 @1192 K (low-P limit)  k'/k = 11.65969055  expected 11.65969055  dev 3.0e-15  ok
+      R1 @1192 K (high-P limit) k'/k = 11.65969055  expected 11.65969055  dev 3.0e-15  ok
+      R1 @1218 K (low-P limit)  k'/k = 11.45142547  expected 11.45142547  dev 7.8e-16  ok
+      R1 @1218 K (high-P limit) k'/k = 11.45142547  expected 11.45142547  dev 8.9e-16  ok
+      R1 @1398 K (low-P limit)  k'/k = 10.29566632  expected 10.29566632  dev 8.9e-16  ok
+      R1 @1398 K (high-P limit) k'/k = 10.29566632  expected 10.29566632  dev 2.8e-15  ok
+      R2 @968 K                k'/k = 14.17555986  expected 14.17555986  dev 2.2e-16  ok
+      R2 @1015 K                k'/k = 13.50925692  expected 13.50925692  dev 2.2e-16  ok
+      R2 @1057 K                k'/k = 12.98734201  expected 12.98734201  dev 2.2e-16  ok
+      R2 @1079 K                k'/k = 12.73763821  expected 12.73763821  dev 0.0e+00  ok
+      R2 @1132 K                k'/k = 12.19334136  expected 12.19334136  dev 2.2e-16  ok
+      R2 @1192 K                k'/k = 11.65969055  expected 11.65969055  dev 0.0e+00  ok
+      R2 @1218 K                k'/k = 11.45142547  expected 11.45142547  dev 0.0e+00  ok
+      R2 @1398 K                k'/k = 10.29566632  expected 10.29566632  dev 3.3e-16  ok
+      R5 @968 K                k'/k = 14.17555986  expected 14.17555986  dev 8.9e-16  ok
+      R5 @1015 K                k'/k = 13.50925692  expected 13.50925692  dev 4.4e-16  ok
+      R5 @1057 K                k'/k = 12.98734201  expected 12.98734201  dev 2.2e-16  ok
+      R5 @1079 K                k'/k = 12.73763821  expected 12.73763821  dev 2.2e-16  ok
+      R5 @1132 K                k'/k = 12.19334136  expected 12.19334136  dev 0.0e+00  ok
+      R5 @1192 K                k'/k = 11.65969055  expected 11.65969055  dev 6.7e-16  ok
+      R5 @1218 K                k'/k = 11.45142547  expected 11.45142547  dev 8.9e-16  ok
+      R5 @1398 K                k'/k = 10.29566632  expected 10.29566632  dev 1.1e-15  ok
+      R4 @968 K                k'/k = 14.17555986  expected 14.17555986  dev 2.2e-16  ok
+      R4 @1015 K                k'/k = 13.50925692  expected 13.50925692  dev 0.0e+00  ok
+      R4 @1057 K                k'/k = 12.98734201  expected 12.98734201  dev 1.1e-16  ok
+      R4 @1079 K                k'/k = 12.73763821  expected 12.73763821  dev 0.0e+00  ok
+      R4 @1132 K                k'/k = 12.19334136  expected 12.19334136  dev 2.2e-16  ok
+      R4 @1192 K                k'/k = 11.65969055  expected 11.65969055  dev 0.0e+00  ok
+      R4 @1218 K                k'/k = 11.45142547  expected 11.45142547  dev 2.2e-16  ok
+      R4 @1398 K                k'/k = 10.29566632  expected 10.29566632  dev 0.0e+00  ok
+      R3 @968 K                k'/k = 14.17555986  expected 14.17555986  dev 2.2e-16  ok
+      R3 @1015 K                k'/k = 13.50925692  expected 13.50925692  dev 4.4e-16  ok
+      R3 @1057 K                k'/k = 12.98734201  expected 12.98734201  dev 6.7e-16  ok
+      R3 @1079 K                k'/k = 12.73763821  expected 12.73763821  dev 8.9e-16  ok
+      R3 @1132 K                k'/k = 12.19334136  expected 12.19334136  dev 8.9e-16  ok/home/yk/h2o2_toy/optimize_r1_variants.py:739: UserWarning: The balance properties of Sobol' points require n to be a power of 2.
+  u = qmc.Sobol(d=NZ, scramble=True, seed=seed).random(n_restart - 1)
+
+      R3 @1192 K                k'/k = 11.65969055  expected 11.65969055  dev 4.4e-16  ok
+      R3 @1218 K                k'/k = 11.45142547  expected 11.45142547  dev 0.0e+00  ok
+      R3 @1398 K                k'/k = 10.29566632  expected 10.29566632  dev 2.2e-16  ok
+      R1 identities (r1_falloff.R1Falloff.check):
+      rate knob   P =     0.01 atm  k'/k = 2.38299829  expected 2.38299829  dev 1.6e-15
+      rate knob   P =     1.00 atm  k'/k = 2.38299829  expected 2.38299829  dev 1.8e-15
+      rate knob   P =   100.00 atm  k'/k = 2.38299829  expected 2.38299829  dev 8.9e-16
+      rate knob   P = 10000.00 atm  k'/k = 2.38299829  expected 2.38299829  dev 1.1e-15
+      eps knob    P =     0.10 atm  k(eps x1.6) / k(P x1.6) = 1.00000000  expected 1  dev 3.3e-16   (k ratio vs nominal 1.5853)
+      eps knob    P =     1.00 atm  k(eps x1.6) / k(P x1.6) = 1.00000000  expected 1  dev 2.2e-16   (k ratio vs nominal 1.5706)
+      eps knob    P =    10.00 atm  k(eps x1.6) / k(P x1.6) = 1.00000000  expected 1  dev 0.0e+00   (k ratio vs nominal 1.5235)
+      rebuild at nominal reproduces every k of the mechanism: dev 0.0e+00
+      all reactions pass
+
+  --- surrogate against the full model ------------------------------------
+      At x = 0 both must agree. A probe with one parameter displaced
+      catches a training / optimization mismatch that x = 0 hides,
+      for example a duplicate pair perturbed on one branch only.
+      1192 K / 1.95 atm
+        x = 0            largest  0.64%   0.14 0.26 0.64 0.07 0.29 0.02 0.41
+        lnA_R1 = +0.3    largest  0.87%   0.34 0.18 0.34 0.87 0.05 0.06 0.33
+        lnA_R2 = +0.3    largest  5.88%   0.47 0.91 4.13 5.88 0.27 0.12 0.33
+        lnA_R5 = +0.3    largest  1.24%   0.28 0.48 0.82 1.24 0.31 0.08 0.41
+        lnA_R4 = +0.3    largest  1.77%   0.12 1.77 0.57 0.11 0.13 0.04 0.26
+        lnA_R3 = +0.3    largest  0.37%   0.07 0.19 0.16 0.22 0.26 0.00 0.37
+      1398 K / 1.91 atm
+        x = 0            largest  1.49%   0.05 0.15 1.49 0.66 0.12 0.02 0.31
+        lnA_R1 = +0.3    largest  5.52%   1.52 5.52 0.59 1.88 0.54 0.86 0.11
+        lnA_R2 = +0.3    largest  2.97%   1.38 1.20 0.06 2.97 0.20 0.11 0.41
+        lnA_R5 = +0.3    largest  2.78%   1.14 0.22 2.44 2.78 0.35 0.07 0.41
+        lnA_R4 = +0.3    largest  2.39%   0.64 0.01 2.39 1.68 0.39 0.14 0.22
+        lnA_R3 = +0.3    largest  1.29%   0.42 0.54 1.29 0.71 0.10 0.08 0.31
+      1057 K / 1.83 atm
+        x = 0            largest  0.05%   0.02 0.03 0.02 0.01 0.02 0.05 0.05
+        lnA_R1 = +0.3    largest  0.17%   0.17 0.02 0.12 0.15 0.03 0.01 0.01
+        lnA_R2 = +0.3    largest  0.09%   0.06 0.09 0.07 0.07 0.03 0.02 0.03
+        lnA_R5 = +0.3    largest  0.05%   0.02 0.03 0.02 0.01 0.02 0.05 0.05
+        lnA_R4 = +0.3    largest  0.09%   0.04 0.09 0.06 0.02 0.01 0.02 0.02
+        lnA_R3 = +0.3    largest  0.08%   0.04 0.02 0.02 0.08 0.07 0.01 0.01
+      968 K / 3.59 atm
+        x = 0            largest  0.70%   0.04 0.11 0.15 0.18 0.21 0.41 0.70
+        lnA_R1 = +0.3    largest  0.23%   0.09 0.09 0.17 0.17 0.17 0.05 0.23
+        lnA_R2 = +0.3    largest  0.71%   0.02 0.06 0.07 0.05 0.06 0.30 0.71
+        lnA_R5 = +0.3    largest  0.68%   0.03 0.11 0.16 0.18 0.20 0.39 0.68
+        lnA_R4 = +0.3    largest  0.67%   0.04 0.07 0.12 0.18 0.21 0.41 0.67
+        lnA_R3 = +0.3    largest  0.76%   0.05 0.07 0.17 0.24 0.28 0.49 0.76
+      1015 K / 3.298 atm
+        x = 0            largest  0.32%   0.08 0.08 0.04 0.02 0.09 0.11 0.32
+        lnA_R1 = +0.3    largest  4.19%   0.02 0.28 0.50 0.78 1.58 1.99 4.19
+        lnA_R2 = +0.3    largest  0.05%   0.05 0.04 0.04 0.01 0.01 0.03 0.01
+        lnA_R5 = +0.3    largest  0.33%   0.08 0.08 0.04 0.02 0.10 0.13 0.33
+        lnA_R4 = +0.3    largest  0.42%   0.24 0.19 0.18 0.17 0.23 0.23 0.42
+        lnA_R3 = +0.3    largest  0.40%   0.21 0.21 0.23 0.22 0.26 0.26 0.40
+      1079 K / 3.444 atm
+        x = 0            largest  0.36%   0.13 0.09 0.03 0.04 0.16 0.17 0.36
+        lnA_R1 = +0.3    largest  1.89%   1.89 1.74 1.25 1.09 1.00 0.75 0.85
+        lnA_R2 = +0.3    largest  0.97%   0.05 0.09 0.14 0.15 0.02 0.19 0.97
+        lnA_R5 = +0.3    largest  0.32%   0.17 0.14 0.09 0.04 0.07 0.09 0.32
+        lnA_R4 = +0.3    largest  3.34%   0.46 0.65 1.00 1.28 1.87 2.20 3.34
+        lnA_R3 = +0.3    largest  1.63%   0.14 0.21 0.50 0.77 1.20 1.29 1.63
+      1132 K / 3.55 atm
+        x = 0            largest  0.66%   0.58 0.66 0.58 0.49 0.25 0.12 0.27
+        lnA_R1 = +0.3    largest  4.73%   2.15 2.42 2.52 2.54 2.64 2.74 4.73
+        lnA_R2 = +0.3    largest  2.00%   0.12 0.04 0.01 0.04 0.31 0.58 2.00
+        lnA_R5 = +0.3    largest  0.69%   0.60 0.69 0.60 0.47 0.16 0.00 0.65
+        lnA_R4 = +0.3    largest  0.63%   0.46 0.44 0.44 0.37 0.07 0.13 0.63
+        lnA_R3 = +0.3    largest  1.95%   0.09 0.23 0.40 0.59 1.02 1.25 1.95
+      1218 K / 3.038 atm
+        x = 0            largest  1.93%   0.04 0.44 0.63 0.83 1.24 1.38 1.93
+        lnA_R1 = +0.3    largest  3.04%   0.87 0.66 0.49 0.26 0.06 0.77 3.04
+        lnA_R2 = +0.3    largest  2.62%   0.35 0.83 1.18 1.53 2.12 2.29 2.62
+        lnA_R5 = +0.3    largest  2.31%   0.04 0.27 0.44 0.66 1.21 1.47 2.31
+        lnA_R4 = +0.3    largest  2.67%   0.03 0.21 0.40 0.63 1.33 1.70 2.67
+        lnA_R3 = +0.3    largest  0.42%   0.09 0.28 0.23 0.18 0.17 0.10 0.42
+      consistent at every probe (largest 5.88%)
+
+==============================================================================
+  [2]  OPTIMIZATION
+==============================================================================
+
+  56 data points, 10 rate parameters + 0 physical model parameters + 6 absorbance parameters + 0 trigger offsets = 16 unknowns
+      multi-start: 16 runs, best 2*cost = 21.5544, 1/16 within 1%
+      note: restarts disagree; compare the x* they reach before trusting one of them
+      objective value (Zhang Eq. 8) = 21.554391
+
+  --- optimized parameters ------------------------------------------------
+      parameter          x*  posterior sd  sd/prior   physical value
+      lnA_R1        -0.1955        0.1413      0.28   A factor x 0.6376
+      Ea_R1         -0.1868        0.1519      0.30   Ea -934 cal/mol
+      lnA_R2        +0.1793        0.2379      0.48   A factor x 1.5112
+      Ea_R2         +0.1940        0.2586      0.52   Ea +970 cal/mol
+      lnA_R5        -0.0444        0.3189      0.64   A factor x 0.9028
+      Ea_R5         +0.0735        0.3944      0.79   Ea +368 cal/mol
+      lnA_R4        -0.2477        0.3288      0.66   A factor x 0.5654
+      Ea_R4         +0.4571        0.3649      0.73   Ea +2286 cal/mol
+      lnA_R3        -0.3729        0.3389      0.68   A factor x 0.4237
+      Ea_R3         +0.2294        0.3592      0.72   Ea +1147 cal/mol
+      lnS_HO2_215   -0.3709        0.1561      0.31   HO2 cross section x 0.7713
+      lnL_968       +0.1306        0.3631      0.73   path length / mixture x 1.0131
+      lnL_1015      -0.2253        0.3947      0.79   path length / mixture x 0.9777
+      lnL_1079      -0.0699        0.4063      0.81   path length / mixture x 0.9930
+      lnL_1132      +0.1547        0.4089      0.82   path length / mixture x 1.0156
+      lnL_1218      -0.1722        0.4249      0.85   path length / mixture x 0.9829
+      nominal path length 968 K / 3.59 atm     32.63 cm (calibrated on the first 5% of the record)
+      nominal path length 1015 K / 3.298 atm   34.47 cm (calibrated on the first 5% of the record)
+      nominal path length 1079 K / 3.444 atm   38.54 cm (calibrated on the first 5% of the record)
+      nominal path length 1132 K / 3.55 atm    41.73 cm (calibrated on the first 5% of the record)
+      nominal path length 1218 K / 3.038 atm   40.97 cm (calibrated on the first 5% of the record)
+
+  --- OH trigger offset ---------------------------------------------------
+      1192 K / 1.95 atm    frozen at 0   leverage 0.199 (threshold 0.146, below it this parameter is not determinable)
+      1398 K / 1.91 atm    frozen at 0   leverage 1.108 (threshold 0.146, below it this parameter is not determinable)
+      1057 K / 1.83 atm    no OH data, no offset
+      968 K / 3.59 atm     no OH data, no offset
+      1015 K / 3.298 atm   no OH data, no offset
+      1079 K / 3.444 atm   no OH data, no offset
+      1132 K / 3.55 atm    no OH data, no offset
+      1218 K / 3.038 atm   no OH data, no offset
+
+  --- Zhang freezing test on the rate parameters --------------------------
+      criterion: |x| < 0.0212 AND posterior sd > 0.480  (did not move and did not tighten)
+      flagged for freezing: none
+
+  --- posterior structure -------------------------------------------------
+      sd along the eigen-directions (prior = 0.5):
+      0.4991  0.4982  0.4962  0.4917  0.4042  0.3912  0.3558  0.3534  0.3461  0.1643  0.1389  0.1052  0.0517  0.0238  0.0074  0.0054
+      directions still at the prior level: 4 of 16   (these are not determined by the data)
+      condition number of the posterior covariance: 8410
+        sd = 0.4991   largest component: Ea_R5    vector = [ 0.01  0.01  0.03  0.04 -0.52 -0.65 -0.09 -0.1   0.04  0.09 -0.1   0.07
+  0.09  0.22  0.33  0.32]
+        sd = 0.4982   largest component: lnL_1218 vector = [-0.01 -0.01 -0.03 -0.04 -0.35 -0.43  0.13  0.14 -0.15 -0.18  0.13 -0.1
+ -0.15 -0.31 -0.44 -0.52]
+        sd = 0.4962   largest component: Ea_R4    vector = [ 0.03  0.04  0.12  0.14  0.01  0.04 -0.56 -0.63 -0.29 -0.29  0.04  0.09
+  0.04  0.07  0.01 -0.26]
+      correlation between ln A and Ea:
+        R1   +0.994   (still on the A / Ea line: only the combination is determined)
+        R2   +0.992   (still on the A / Ea line: only the combination is determined)
+        R5   +0.929   (still on the A / Ea line: only the combination is determined)
+        R4   +0.954   (still on the A / Ea line: only the combination is determined)
+        R3   +0.876
+
+  --- overall goodness of fit ---------------------------------------------
+      sum of squared data residuals = 91.232 over 56 data points  (unweighted: the fit itself weights each trace by 1/sqrt(n))
+      effective degrees of freedom between 40 (prior weak) and 56 (prior strong)
+      chi-square 95% critical value: 55.76 .. 74.47
+      verdict: NOT consistent under either convention
+
+  --- rate constants relative to nominal, at the experimental temperatures 
+      R1 rows: k0 and k_inf scale by the same factor (both limits).
+      reaction   T [K]   k/k_nom         2 sigma range
+      R1         968     1.036        0.883 .. 1.216
+      R1        1015     1.013        0.891 .. 1.152
+      R1        1057     0.995        0.896 .. 1.104
+      R1        1079     0.986        0.897 .. 1.083
+      R1        1132     0.966        0.894 .. 1.043
+      R1        1192     0.946        0.880 .. 1.016
+      R1        1218     0.938        0.871 .. 1.010
+      R1        1398     0.892        0.789 .. 1.009
+      R2         968     0.913        0.681 .. 1.223
+      R2        1015     0.934        0.735 .. 1.188
+      R2        1057     0.952        0.779 .. 1.164
+      R2        1079     0.961        0.800 .. 1.155
+      R2        1132     0.982        0.842 .. 1.144
+      R2        1192     1.003        0.873 .. 1.154
+      R2        1218     1.012        0.879 .. 1.165
+      R2        1398     1.066        0.865 .. 1.314
+      R5         968     0.746        0.311 .. 1.791
+      R5        1015     0.752        0.337 .. 1.681
+      R5        1057     0.758        0.359 .. 1.602
+      R5        1079     0.761        0.369 .. 1.567
+      R5        1132     0.767        0.393 .. 1.497
+      R5        1192     0.773        0.415 .. 1.440
+      R5        1218     0.776        0.423 .. 1.421
+      R5        1398     0.791        0.458 .. 1.367
+      R4         968     0.172        0.091 .. 0.326
+      R4        1015     0.182        0.102 .. 0.325
+      R4        1057     0.190        0.111 .. 0.326
+      R4        1079     0.195        0.116 .. 0.327
+      R4        1132     0.205        0.126 .. 0.332
+      R4        1192     0.215        0.136 .. 0.342
+      R4        1218     0.220        0.139 .. 0.347
+      R4        1398     0.248        0.155 .. 0.398
+      R3         968     0.233        0.095 .. 0.576
+      R3        1015     0.240        0.102 .. 0.566
+      R3        1057     0.245        0.107 .. 0.561
+      R3        1079     0.248        0.110 .. 0.559
+      R3        1132     0.254        0.116 .. 0.558
+      R3        1192     0.261        0.121 .. 0.562
+      R3        1218     0.264        0.123 .. 0.564
+      R3        1398     0.280        0.132 .. 0.597
+
+  --- pivot temperature (where this fit is most certain) ------------------
+      Away from the pivot the A factor and Ea trade off and the band widens.
+      Quote k at the pivot, not at the edges of an extrapolated range.
+      R1     pivot =   1182 K   k/k_nom = 0.949 +/- 0.036 (1 sd of ln k)   [at 2500 K the sd is 0.174]
+      R2     pivot =   1197 K   k/k_nom = 1.005 +/- 0.070 (1 sd of ln k)   [at 2500 K the sd is 0.292]
+      R5     pivot =   1455 K   k/k_nom = 0.795 +/- 0.272 (1 sd of ln k)   [at 2500 K the sd is 0.394]
+      R4     pivot =   1270 K   k/k_nom = 0.229 +/- 0.226 (1 sd of ln k)   [at 2500 K the sd is 0.421]
+      R3     pivot =   1322 K   k/k_nom = 0.274 +/- 0.376 (1 sd of ln k)   [at 2500 K the sd is 0.495]
+
+==============================================================================
+  [3]  CONSISTENCY TEST  (Zhang Eq. 13)
+==============================================================================
+
+  F = (observed - predicted) / (2 x experimental uncertainty).
+  |F| > 1 means that data point cannot be reconciled with the model.
+  The Cantera column is the one to judge on: it uses the full model
+  rather than the surrogate, so it is not affected by surrogate error.
+
+  --- 1192 K / 1.95 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0089 ms           +0.515        +0.441      -0.073     1.022   ok
+      OH     0.0615 ms           +0.008        -0.219      -0.227     0.989   ok
+      OH     0.5186 ms           -0.036        -0.159      -0.123     0.992   ok
+      OH     0.6359 ms           -0.030        -0.137      -0.107     0.993   ok
+      H2O    0.0090 ms           -1.010        -1.079      -0.068     0.947   INCONSISTENT
+      H2O    0.0930 ms           +0.368        +0.524      +0.155     1.027   ok
+      H2O    0.3692 ms           +0.372        +0.586      +0.214     1.030   ok
+      largest |F| = 1.079   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.227 (1.1% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0048 ms           +0.318        +0.491      +0.173     1.025   ok
+      OH     0.0130 ms           -0.698        -1.199      -0.501     0.942   INCONSISTENT
+      OH     0.0519 ms           +0.010        +0.813      +0.803     1.041   ok
+      OH     0.0858 ms           +0.134        -0.544      -0.679     0.973   ok
+      H2O    0.0019 ms           -2.158        -2.208      -0.049     0.895   INCONSISTENT
+      H2O    0.0088 ms           +0.278        +0.331      +0.053     1.017   ok
+      H2O    0.0468 ms           +0.251        +0.273      +0.022     1.014   ok
+      largest |F| = 2.208   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.803 (4.1% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1057 K / 1.83 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      H2O    0.1217 ms           -0.502        -0.489      +0.014     0.976   ok
+      H2O    0.4883 ms           -0.256        -0.200      +0.056     0.990   ok
+      H2O    0.9799 ms           -0.164        -0.070      +0.094     0.997   ok
+      H2O    1.6141 ms           -0.095        +0.008      +0.103     1.000   ok
+      H2O    3.6808 ms           +0.112        +0.179      +0.067     1.009   ok
+      H2O    4.8448 ms           -0.079        -0.036      +0.044     0.998   ok
+      H2O    5.5707 ms           +0.041        +0.074      +0.033     1.004   ok
+      largest |F| = 0.489   all data points consistent
+      largest surrogate contribution to |F| = 0.103 (0.5% error in the predicted value)
+
+  --- 968 K / 3.59 atm   tau = +0.000 us ----------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0379 ms           -0.049        -0.050      -0.000     0.995   ok
+      ABS215 0.1227 ms           +0.300        +0.309      +0.009     1.031   ok
+      ABS215 0.2013 ms           +0.502        +0.548      +0.046     1.056   ok
+      ABS215 0.2931 ms           +0.169        +0.239      +0.070     1.024   ok
+      ABS215 0.3719 ms           +0.028        +0.100      +0.073     1.010   ok
+      ABS215 0.8236 ms           +0.200        +0.251      +0.051     1.025   ok
+      ABS215 1.4021 ms           -0.235        -0.203      +0.032     0.980   ok
+      largest |F| = 0.548   all data points consistent
+      largest surrogate contribution to |F| = 0.073 (0.7% error in the predicted value)
+
+  --- 1015 K / 3.298 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1796 ms           +0.324        +0.436      +0.113     1.045   ok
+      ABS215 0.2710 ms           +0.020        +0.072      +0.051     1.007   ok
+      ABS215 0.3638 ms           +0.235        +0.280      +0.045     1.028   ok
+      ABS215 0.4687 ms           +0.223        +0.271      +0.048     1.027   ok
+      ABS215 0.7372 ms           +0.025        +0.059      +0.034     1.006   ok
+      ABS215 0.8567 ms           -0.513        -0.490      +0.024     0.952   ok
+      ABS215 1.4341 ms           -1.890        -1.943      -0.053     0.823   INCONSISTENT
+      largest |F| = 1.943   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.113 (1.1% error in the predicted value)
+
+  --- 1079 K / 3.444 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1310 ms           +0.136        +0.343      +0.207     1.035   ok
+      ABS215 0.2134 ms           -0.582        -0.481      +0.101     0.953   ok
+      ABS215 0.3743 ms           -0.099        -0.080      +0.019     0.992   ok
+      ABS215 0.4853 ms           +0.177        +0.119      -0.058     1.012   ok
+      ABS215 0.6694 ms           +0.604        +0.368      -0.236     1.037   ok
+      ABS215 0.7547 ms           -0.474        -0.811      -0.336     0.922   ok
+      ABS215 0.9812 ms           -0.251        -0.902      -0.651     0.914   ok
+      largest |F| = 0.902   all data points consistent
+      largest surrogate contribution to |F| = 0.651 (6.7% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1132 K / 3.55 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0491 ms           -0.636        -0.677      -0.042     0.935   ok
+      ABS215 0.0807 ms           -1.147        -1.267      -0.120     0.881   INCONSISTENT
+      ABS215 0.1156 ms           -0.334        -0.491      -0.157     0.952   ok
+      ABS215 0.1524 ms           +0.100        -0.089      -0.189     0.991   ok
+      ABS215 0.2267 ms           -0.249        -0.533      -0.284     0.948   ok
+      ABS215 0.2669 ms           +1.086        +0.726      -0.361     1.075   ok
+      ABS215 0.4159 ms           +2.263        +1.610      -0.653     1.175   INCONSISTENT
+      largest |F| = 1.610   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.653 (6.8% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1218 K / 3.038 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0137 ms           -0.649        -0.399      +0.250     0.961   ok
+      ABS215 0.0348 ms           +0.188        +0.247      +0.059     1.025   ok
+      ABS215 0.0434 ms           +0.249        +0.254      +0.006     1.026   ok
+      ABS215 0.0543 ms           +0.231        +0.185      -0.045     1.019   ok
+      ABS215 0.0790 ms           +0.154        -0.044      -0.197     0.996   ok
+      ABS215 0.0936 ms           -0.963        -1.277      -0.313     0.880   INCONSISTENT
+      ABS215 0.1276 ms           -0.414        -1.100      -0.686     0.896   INCONSISTENT
+      largest |F| = 1.277   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.686 (7.1% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+==============================================================================
+  [4]  CONFIRMATION WITHOUT THE SURROGATE
+==============================================================================
+
+  The Cantera column of the consistency test checks the prediction at
+  a given x. It does not check x itself, because x came out of the
+  surrogate. Repeating the fit with Cantera in place of the network is
+  the only check on the optimized parameters. Starting from the
+  surrogate optimum, so this converges in a few iterations.
+
+  --- optimized parameters with and without the surrogate -----------------
+      parameter      surrogate     Cantera   difference    in sd   physical difference
+      lnA_R1           -0.1955     -0.2388      -0.0433     0.31   A factor x 0.9051
+      Ea_R1            -0.1868     -0.2320      -0.0452     0.30   Ea -226 cal/mol
+      lnA_R2           +0.1793     +0.0337      -0.1456     0.61   A factor x 0.7151
+      Ea_R2            +0.1940     +0.0511      -0.1429     0.55   Ea -715 cal/mol
+      lnA_R5           -0.0444     -0.0274      +0.0170     0.05   A factor x 1.0398
+      Ea_R5            +0.0735     +0.0092      -0.0643     0.16   Ea -322 cal/mol
+      lnA_R4           -0.2477     -0.1791      +0.0686     0.21   A factor x 1.1710
+      Ea_R4            +0.4571     +0.3970      -0.0601     0.16   Ea -301 cal/mol
+      lnA_R3           -0.3729     -0.2953      +0.0776     0.23   A factor x 1.1957
+      Ea_R3            +0.2294     +0.2462      +0.0169     0.05   Ea +84 cal/mol
+      lnS_HO2_215      -0.3709     -0.1981      +0.1728     1.11   HO2 cross section x 1.1286
+      lnL_968          +0.1306     +0.0993      -0.0313     0.09   path length / mixture x 0.9969
+      lnL_1015         -0.2253     -0.2368      -0.0115     0.03   path length / mixture x 0.9988
+      lnL_1079         -0.0699     -0.0564      +0.0135     0.03   path length / mixture x 1.0014
+      lnL_1132         +0.1547     +0.1265      -0.0282     0.07   path length / mixture x 0.9972
+      lnL_1218         -0.1722     -0.1075      +0.0647     0.15   path length / mixture x 1.0065
+      largest difference is 1.11 posterior standard deviations
+      *** the surrogate is shifting the optimum; improve it before
+      *** reporting these parameters
+
+==============================================================================
+  [5]  SIGNIFICANCE OF EACH REACTION
+==============================================================================
+
+  Each reaction is fixed at its nominal value and the fit repeated.
+  The rise in the sum of squared data residuals is compared against the
+  chi-square distribution with 2 degrees of freedom (one A factor and
+  one activation energy). Critical values: 5.99 at 95%, 9.21 at 99%.
+  A reaction that does not raise the residual is not determined by the
+  data and should be frozen (Zhang Eqs. 15-16).
+
+      frozen        residual sum      rise    p value   verdict
+      none                91.232                        reference
+      R1                 111.108    19.876     0.0000   significant
+      R2                 100.059     8.827     0.0121   significant
+      R5                 102.318    11.086     0.0039   significant
+      R4                 271.748   180.516     0.0000   significant
+      R3                 159.955    68.723     0.0000   significant
+
+==============================================================================
+  [6]  PREDICTIVE TEST  (leave one condition out)
+==============================================================================
+
+  Each condition is removed from the fit in turn and then predicted.
+  This is the only test of predictive capability: the consistency test
+  above uses every condition in the fit, so it can only show internal
+  agreement. A prediction that fails while the joint fit passes means
+  the conditions are being reconciled by parameters rather than agreeing.
+  A held-out absorbance condition keeps its path factor at the prior
+  (nominal), since nothing else constrains it.
+
+  --- fit on 1398, 1057, 968, 1015, 1079, 1132, 1218 K, predict 1192 K ----
+      x* = [-0.139  -0.1123 -0.0282 -0.0751 -0.0572  0.0549 -0.2732  0.344  -0.2861
+  0.178  -0.2636  0.1485 -0.1817 -0.1249  0.1457 -0.1285]
+
+  --- 1192 K / 1.95 atm   [HELD OUT: this is a prediction]   tau = +0.000 us 
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0089 ms           +2.372        +2.294      -0.078     1.122   INCONSISTENT
+      OH     0.0615 ms           +2.105        +1.971      -0.134     1.104   INCONSISTENT
+      OH     0.5186 ms           -0.368        +0.867      +1.235     1.044   ok
+      OH     0.6359 ms           -0.884        +0.705      +1.588     1.036   ok
+      H2O    0.0090 ms           -1.052        -1.102      -0.050     0.946   INCONSISTENT
+      H2O    0.0930 ms           +0.487        +0.605      +0.119     1.031   ok
+      H2O    0.3692 ms           +0.379        +0.576      +0.196     1.029   ok
+      largest |F| = 2.294   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 1.588 (8.3% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0048 ms           +0.566        +0.788      +0.222     1.040   ok
+      OH     0.0130 ms           -0.408        -0.691      -0.283     0.966   ok
+      OH     0.0519 ms           +0.011        +0.565      +0.554     1.029   ok
+      OH     0.0858 ms           +0.035        -0.744      -0.779     0.963   ok
+      H2O    0.0019 ms           -2.159        -2.214      -0.055     0.895   INCONSISTENT
+      H2O    0.0088 ms           +0.227        +0.244      +0.017     1.012   ok
+      H2O    0.0468 ms           +0.197        +0.205      +0.008     1.010   ok
+      largest |F| = 2.214   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.779 (4.0% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1057 K / 1.83 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      H2O    0.1217 ms           -0.455        -0.443      +0.012     0.978   ok
+      H2O    0.4883 ms           -0.075        -0.027      +0.047     0.999   ok
+      H2O    0.9799 ms           +0.059        +0.121      +0.063     1.006   ok
+      H2O    1.6141 ms           +0.112        +0.171      +0.060     1.009   ok
+      H2O    3.6808 ms           +0.199        +0.238      +0.039     1.012   ok
+      H2O    4.8448 ms           -0.035        -0.006      +0.028     1.000   ok
+      H2O    5.5707 ms           +0.069        +0.093      +0.024     1.005   ok
+      largest |F| = 0.443   all data points consistent
+      largest surrogate contribution to |F| = 0.063 (0.3% error in the predicted value)
+
+  --- 968 K / 3.59 atm   tau = +0.000 us ----------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0379 ms           -0.089        -0.084      +0.005     0.992   ok
+      ABS215 0.1227 ms           +0.265        +0.272      +0.007     1.028   ok
+      ABS215 0.2013 ms           +0.515        +0.538      +0.023     1.055   ok
+      ABS215 0.2931 ms           +0.235        +0.271      +0.036     1.027   ok
+      ABS215 0.3719 ms           +0.117        +0.160      +0.043     1.016   ok
+      ABS215 0.8236 ms           +0.264        +0.328      +0.064     1.033   ok
+      ABS215 1.4021 ms           -0.267        -0.185      +0.082     0.982   ok
+      largest |F| = 0.538   all data points consistent
+      largest surrogate contribution to |F| = 0.082 (0.8% error in the predicted value)
+
+  --- 1015 K / 3.298 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1796 ms           +0.350        +0.447      +0.097     1.046   ok
+      ABS215 0.2710 ms           +0.107        +0.136      +0.029     1.014   ok
+      ABS215 0.3638 ms           +0.343        +0.358      +0.015     1.036   ok
+      ABS215 0.4687 ms           +0.328        +0.341      +0.012     1.035   ok
+      ABS215 0.7372 ms           +0.084        +0.078      -0.006     1.008   ok
+      ABS215 0.8567 ms           -0.481        -0.496      -0.015     0.952   ok
+      ABS215 1.4341 ms           -2.003        -2.076      -0.073     0.812   INCONSISTENT
+      largest |F| = 2.076   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.097 (1.0% error in the predicted value)
+
+  --- 1079 K / 3.444 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1310 ms           +0.228        +0.473      +0.244     1.048   ok
+      ABS215 0.2134 ms           -0.426        -0.290      +0.136     0.971   ok
+      ABS215 0.3743 ms           -0.001        +0.080      +0.081     1.008   ok
+      ABS215 0.4853 ms           +0.195        +0.238      +0.043     1.024   ok
+      ABS215 0.6694 ms           +0.469        +0.420      -0.049     1.043   ok
+      ABS215 0.7547 ms           -0.683        -0.788      -0.105     0.924   ok
+      ABS215 0.9812 ms           -0.657        -0.951      -0.294     0.909   ok
+      largest |F| = 0.951   all data points consistent
+      largest surrogate contribution to |F| = 0.294 (3.0% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1132 K / 3.55 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0491 ms           -0.769        -0.767      +0.002     0.926   ok
+      ABS215 0.0807 ms           -1.151        -1.235      -0.084     0.884   INCONSISTENT
+      ABS215 0.1156 ms           -0.268        -0.377      -0.110     0.963   ok
+      ABS215 0.1524 ms           +0.185        +0.062      -0.123     1.006   ok
+      ABS215 0.2267 ms           -0.199        -0.370      -0.171     0.964   ok
+      ABS215 0.2669 ms           +1.101        +0.883      -0.218     1.092   ok
+      ABS215 0.4159 ms           +2.120        +1.753      -0.367     1.192   INCONSISTENT
+      largest |F| = 1.753   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.367 (3.7% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1218 K / 3.038 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0137 ms           -0.935        -0.673      +0.262     0.935   ok
+      ABS215 0.0348 ms           +0.168        +0.186      +0.018     1.019   ok
+      ABS215 0.0434 ms           +0.300        +0.270      -0.030     1.027   ok
+      ABS215 0.0543 ms           +0.342        +0.275      -0.067     1.028   ok
+      ABS215 0.0790 ms           +0.317        +0.154      -0.163     1.016   ok
+      ABS215 0.0936 ms           -0.799        -1.034      -0.234     0.902   INCONSISTENT
+      ABS215 0.1276 ms           -0.293        -0.762      -0.470     0.927   ok
+      largest |F| = 1.034   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.470 (4.8% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+      prediction for 1192 K: largest |F| = 2.294   FAILS
+
+  --- fit on 1192, 1057, 968, 1015, 1079, 1132, 1218 K, predict 1398 K ----
+      x* = [-0.0952 -0.0855  0.0024 -0.0141 -0.0741  0.0924 -0.3712  0.3922 -0.3045
+  0.2263 -0.3737  0.1631 -0.1672 -0.0809  0.1034 -0.1579]
+
+  --- 1192 K / 1.95 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0089 ms           +0.502        +0.471      -0.031     1.024   ok
+      OH     0.0615 ms           -0.352        -0.753      -0.400     0.963   ok
+      OH     0.5186 ms           -0.060        -1.251      -1.191     0.939   INCONSISTENT
+      OH     0.6359 ms           +0.051        -1.203      -1.254     0.942   INCONSISTENT
+      H2O    0.0090 ms           -1.013        -1.113      -0.100     0.946   INCONSISTENT
+      H2O    0.0930 ms           +0.271        +0.442      +0.171     1.022   ok
+      H2O    0.3692 ms           +0.348        +0.557      +0.209     1.028   ok
+      largest |F| = 1.251   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 1.254 (6.5% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   [HELD OUT: this is a prediction]   tau = +0.000 us 
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0048 ms           -1.100        -0.888      +0.212     0.957   ok
+      OH     0.0130 ms           -2.762        -3.136      -0.374     0.855   INCONSISTENT
+      OH     0.0519 ms           -1.982        -1.465      +0.517     0.929   INCONSISTENT
+      OH     0.0858 ms           -1.376        -2.697      -1.320     0.874   INCONSISTENT
+      H2O    0.0019 ms           -2.180        -2.229      -0.049     0.895   INCONSISTENT
+      H2O    0.0088 ms           +0.139        +0.262      +0.123     1.013   ok
+      H2O    0.0468 ms           +0.233        +0.303      +0.070     1.015   ok
+      largest |F| = 3.136   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 1.320 (6.8% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1057 K / 1.83 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      H2O    0.1217 ms           -0.494        -0.486      +0.008     0.976   ok
+      H2O    0.4883 ms           -0.212        -0.155      +0.056     0.992   ok
+      H2O    0.9799 ms           -0.106        -0.016      +0.090     0.999   ok
+      H2O    1.6141 ms           -0.040        +0.057      +0.097     1.003   ok
+      H2O    3.6808 ms           +0.136        +0.206      +0.070     1.010   ok
+      H2O    4.8448 ms           -0.066        -0.017      +0.050     0.999   ok
+      H2O    5.5707 ms           +0.049        +0.090      +0.041     1.005   ok
+      largest |F| = 0.486   all data points consistent
+      largest surrogate contribution to |F| = 0.097 (0.5% error in the predicted value)
+
+  --- 968 K / 3.59 atm   tau = +0.000 us ----------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0379 ms           -0.078        -0.076      +0.002     0.992   ok
+      ABS215 0.1227 ms           +0.292        +0.300      +0.007     1.030   ok
+      ABS215 0.2013 ms           +0.528        +0.557      +0.029     1.057   ok
+      ABS215 0.2931 ms           +0.228        +0.270      +0.042     1.027   ok
+      ABS215 0.3719 ms           +0.102        +0.145      +0.043     1.015   ok
+      ABS215 0.8236 ms           +0.272        +0.305      +0.033     1.031   ok
+      ABS215 1.4021 ms           -0.203        -0.181      +0.023     0.982   ok
+      largest |F| = 0.557   all data points consistent
+      largest surrogate contribution to |F| = 0.043 (0.4% error in the predicted value)
+
+  --- 1015 K / 3.298 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1796 ms           +0.378        +0.441      +0.063     1.045   ok
+      ABS215 0.2710 ms           +0.092        +0.106      +0.013     1.011   ok
+      ABS215 0.3638 ms           +0.314        +0.324      +0.010     1.033   ok
+      ABS215 0.4687 ms           +0.301        +0.314      +0.013     1.032   ok
+      ABS215 0.7372 ms           +0.089        +0.081      -0.008     1.008   ok
+      ABS215 0.8567 ms           -0.458        -0.479      -0.021     0.953   ok
+      ABS215 1.4341 ms           -1.886        -1.991      -0.105     0.819   INCONSISTENT
+      largest |F| = 1.991   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.105 (1.1% error in the predicted value)
+
+  --- 1079 K / 3.444 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1310 ms           +0.200        +0.391      +0.191     1.040   ok
+      ABS215 0.2134 ms           -0.501        -0.396      +0.104     0.961   ok
+      ABS215 0.3743 ms           -0.042        -0.004      +0.038     1.000   ok
+      ABS215 0.4853 ms           +0.203        +0.174      -0.029     1.018   ok
+      ABS215 0.6694 ms           +0.564        +0.377      -0.187     1.038   ok
+      ABS215 0.7547 ms           -0.551        -0.825      -0.274     0.921   ok
+      ABS215 0.9812 ms           -0.440        -0.990      -0.551     0.906   ok
+      largest |F| = 0.990   all data points consistent
+      largest surrogate contribution to |F| = 0.551 (5.7% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1132 K / 3.55 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0491 ms           -0.718        -0.709      +0.009     0.932   ok
+      ABS215 0.0807 ms           -1.198        -1.264      -0.067     0.881   INCONSISTENT
+      ABS215 0.1156 ms           -0.362        -0.451      -0.089     0.956   ok
+      ABS215 0.1524 ms           +0.082        -0.030      -0.112     0.997   ok
+      ABS215 0.2267 ms           -0.274        -0.477      -0.203     0.953   ok
+      ABS215 0.2669 ms           +1.049        +0.768      -0.281     1.080   ok
+      ABS215 0.4159 ms           +2.145        +1.572      -0.573     1.170   INCONSISTENT
+      largest |F| = 1.572   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.573 (5.9% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1218 K / 3.038 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0137 ms           -0.741        -0.518      +0.222     0.949   ok
+      ABS215 0.0348 ms           +0.165        +0.142      -0.023     1.014   ok
+      ABS215 0.0434 ms           +0.253        +0.181      -0.072     1.018   ok
+      ABS215 0.0543 ms           +0.259        +0.147      -0.111     1.015   ok
+      ABS215 0.0790 ms           +0.208        -0.031      -0.239     0.997   ok
+      ABS215 0.0936 ms           -0.904        -1.249      -0.345     0.883   INCONSISTENT
+      ABS215 0.1276 ms           -0.346        -1.063      -0.717     0.899   INCONSISTENT
+      largest |F| = 1.249   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.717 (7.4% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+      prediction for 1398 K: largest |F| = 3.136   FAILS
+
+  --- fit on 1192, 1398, 968, 1015, 1079, 1132, 1218 K, predict 1057 K ----
+      x* = [-2.349e-01 -2.271e-01 -4.400e-03  2.140e-02 -8.440e-02 -2.000e-04
+ -2.332e-01  2.863e-01 -4.382e-01  2.678e-01 -2.548e-01  6.950e-02
+ -3.220e-01 -1.704e-01  1.983e-01 -7.100e-02]
+
+  --- 1192 K / 1.95 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0089 ms           +0.083        -0.007      -0.090     1.000   ok
+      OH     0.0615 ms           +0.479        +0.775      +0.295     1.039   ok
+      OH     0.5186 ms           -0.172        +0.922      +1.094     1.047   ok
+      OH     0.6359 ms           -0.443        +0.532      +0.975     1.027   ok
+      H2O    0.0090 ms           -1.001        -1.049      -0.048     0.949   INCONSISTENT
+      H2O    0.0930 ms           +0.378        +0.468      +0.090     1.024   ok
+      H2O    0.3692 ms           +0.358        +0.516      +0.158     1.026   ok
+      largest |F| = 1.049   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 1.094 (5.6% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0048 ms           +0.156        +0.076      -0.081     1.004   ok
+      OH     0.0130 ms           -0.512        -1.220      -0.708     0.941   INCONSISTENT
+      OH     0.0519 ms           +0.188        +0.610      +0.422     1.031   ok
+      OH     0.0858 ms           +0.266        -0.540      -0.807     0.973   ok
+      H2O    0.0019 ms           -2.076        -2.078      -0.002     0.901   INCONSISTENT
+      H2O    0.0088 ms           +0.369        +0.444      +0.075     1.022   ok
+      H2O    0.0468 ms           +0.219        +0.161      -0.059     1.008   ok
+      largest |F| = 2.078   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.807 (4.1% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1057 K / 1.83 atm   [HELD OUT: this is a prediction]   tau = +0.000 us 
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      H2O    0.1217 ms           -0.527        -0.508      +0.019     0.975   ok
+      H2O    0.4883 ms           -0.299        -0.259      +0.040     0.987   ok
+      H2O    0.9799 ms           -0.219        -0.146      +0.074     0.993   ok
+      H2O    1.6141 ms           -0.149        -0.069      +0.080     0.997   ok
+      H2O    3.6808 ms           +0.083        +0.123      +0.040     1.006   ok
+      H2O    4.8448 ms           -0.097        -0.078      +0.019     0.996   ok
+      H2O    5.5707 ms           +0.029        +0.040      +0.011     1.002   ok
+      largest |F| = 0.508   all data points consistent
+      largest surrogate contribution to |F| = 0.080 (0.4% error in the predicted value)
+
+  --- 968 K / 3.59 atm   tau = +0.000 us ----------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0379 ms           -0.023        -0.026      -0.003     0.997   ok
+      ABS215 0.1227 ms           +0.273        +0.275      +0.002     1.028   ok
+      ABS215 0.2013 ms           +0.440        +0.470      +0.030     1.048   ok
+      ABS215 0.2931 ms           +0.075        +0.114      +0.039     1.012   ok
+      ABS215 0.3719 ms           -0.086        -0.058      +0.028     0.994   ok
+      ABS215 0.8236 ms           +0.049        +0.023      -0.026     1.002   ok
+      ABS215 1.4021 ms           -0.382        -0.428      -0.045     0.958   ok
+      largest |F| = 0.470   all data points consistent
+      largest surrogate contribution to |F| = 0.045 (0.5% error in the predicted value)
+
+  --- 1015 K / 3.298 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1796 ms           +0.240        +0.332      +0.092     1.034   ok
+      ABS215 0.2710 ms           -0.115        -0.091      +0.024     0.991   ok
+      ABS215 0.3638 ms           +0.077        +0.086      +0.009     1.009   ok
+      ABS215 0.4687 ms           +0.058        +0.065      +0.007     1.007   ok
+      ABS215 0.7372 ms           -0.130        -0.142      -0.013     0.986   ok
+      ABS215 0.8567 ms           -0.660        -0.684      -0.024     0.934   ok
+      ABS215 1.4341 ms           -1.981        -2.091      -0.110     0.811   INCONSISTENT
+      largest |F| = 2.091   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.110 (1.1% error in the predicted value)
+
+  --- 1079 K / 3.444 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1310 ms           -0.004        +0.308      +0.312     1.031   ok
+      ABS215 0.2134 ms           -0.747        -0.550      +0.196     0.946   ok
+      ABS215 0.3743 ms           -0.246        -0.112      +0.134     0.989   ok
+      ABS215 0.4853 ms           +0.062        +0.146      +0.085     1.015   ok
+      ABS215 0.6694 ms           +0.560        +0.520      -0.040     1.053   ok
+      ABS215 0.7547 ms           -0.473        -0.590      -0.118     0.943   ok
+      ABS215 0.9812 ms           -0.100        -0.473      -0.372     0.954   ok
+      largest |F| = 0.590   all data points consistent
+      largest surrogate contribution to |F| = 0.372 (3.8% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1132 K / 3.55 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0491 ms           -0.694        -0.703      -0.009     0.932   ok
+      ABS215 0.0807 ms           -1.219        -1.243      -0.024     0.883   INCONSISTENT
+      ABS215 0.1156 ms           -0.403        -0.445      -0.042     0.956   ok
+      ABS215 0.1524 ms           +0.047        -0.011      -0.058     0.999   ok
+      ABS215 0.2267 ms           -0.243        -0.340      -0.097     0.967   ok
+      ABS215 0.2669 ms           +1.137        +1.000      -0.136     1.105   INCONSISTENT
+      ABS215 0.4159 ms           +2.553        +2.278      -0.275     1.256   INCONSISTENT
+      largest |F| = 2.278   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.275 (2.8% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1218 K / 3.038 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0137 ms           -0.772        -0.504      +0.268     0.951   ok
+      ABS215 0.0348 ms           +0.189        +0.379      +0.190     1.039   ok
+      ABS215 0.0434 ms           +0.293        +0.437      +0.145     1.045   ok
+      ABS215 0.0543 ms           +0.332        +0.424      +0.093     1.043   ok
+      ABS215 0.0790 ms           +0.392        +0.334      -0.057     1.034   ok
+      ABS215 0.0936 ms           -0.636        -0.798      -0.162     0.923   ok
+      ABS215 0.1276 ms           +0.122        -0.334      -0.457     0.967   ok
+      largest |F| = 0.798   all data points consistent
+      largest surrogate contribution to |F| = 0.457 (4.7% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+      prediction for 1057 K: largest |F| = 0.508   passes
+
+  --- fit on 1192, 1398, 1057, 1015, 1079, 1132, 1218 K, predict 968 K ----
+      x* = [-0.1884 -0.1782  0.1882  0.2043 -0.0446  0.074  -0.2527  0.4547 -0.3807
+  0.2206 -0.3808  0.     -0.2156 -0.0664  0.1654 -0.1572]
+
+  --- 1192 K / 1.95 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0089 ms           +0.530        +0.457      -0.073     1.023   ok
+      OH     0.0615 ms           +0.003        -0.235      -0.238     0.988   ok
+      OH     0.5186 ms           -0.035        -0.202      -0.166     0.990   ok
+      OH     0.6359 ms           -0.028        -0.182      -0.154     0.991   ok
+      H2O    0.0090 ms           -1.010        -1.076      -0.066     0.948   INCONSISTENT
+      H2O    0.0930 ms           +0.380        +0.536      +0.155     1.027   ok
+      H2O    0.3692 ms           +0.376        +0.591      +0.215     1.030   ok
+      largest |F| = 1.076   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.238 (1.2% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0048 ms           +0.317        +0.489      +0.172     1.025   ok
+      OH     0.0130 ms           -0.703        -1.207      -0.505     0.941   INCONSISTENT
+      OH     0.0519 ms           +0.006        +0.814      +0.808     1.042   ok
+      OH     0.0858 ms           +0.135        -0.544      -0.679     0.973   ok
+      H2O    0.0019 ms           -2.160        -2.211      -0.050     0.895   INCONSISTENT
+      H2O    0.0088 ms           +0.271        +0.327      +0.055     1.016   ok
+      H2O    0.0468 ms           +0.252        +0.275      +0.024     1.014   ok
+      largest |F| = 2.211   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.808 (4.1% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1057 K / 1.83 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      H2O    0.1217 ms           -0.494        -0.481      +0.014     0.976   ok
+      H2O    0.4883 ms           -0.238        -0.182      +0.056     0.991   ok
+      H2O    0.9799 ms           -0.142        -0.048      +0.093     0.998   ok
+      H2O    1.6141 ms           -0.073        +0.028      +0.101     1.001   ok
+      H2O    3.6808 ms           +0.121        +0.187      +0.066     1.009   ok
+      H2O    4.8448 ms           -0.074        -0.031      +0.043     0.998   ok
+      H2O    5.5707 ms           +0.045        +0.078      +0.033     1.004   ok
+      largest |F| = 0.481   all data points consistent
+      largest surrogate contribution to |F| = 0.101 (0.5% error in the predicted value)
+
+  --- 968 K / 3.59 atm   [HELD OUT: this is a prediction]   tau = +0.000 us 
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0379 ms           +0.086        +0.086      -0.000     1.009   ok
+      ABS215 0.1227 ms           +0.443        +0.452      +0.009     1.046   ok
+      ABS215 0.2013 ms           +0.649        +0.695      +0.046     1.072   ok
+      ABS215 0.2931 ms           +0.319        +0.389      +0.070     1.040   ok
+      ABS215 0.3719 ms           +0.177        +0.250      +0.073     1.025   ok
+      ABS215 0.8236 ms           +0.345        +0.398      +0.053     1.041   ok
+      ABS215 1.4021 ms           -0.099        -0.062      +0.037     0.994   ok
+      largest |F| = 0.695   all data points consistent
+      largest surrogate contribution to |F| = 0.073 (0.7% error in the predicted value)
+
+  --- 1015 K / 3.298 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1796 ms           +0.339        +0.450      +0.110     1.046   ok
+      ABS215 0.2710 ms           +0.036        +0.085      +0.050     1.009   ok
+      ABS215 0.3638 ms           +0.249        +0.292      +0.043     1.030   ok
+      ABS215 0.4687 ms           +0.235        +0.281      +0.046     1.029   ok
+      ABS215 0.7372 ms           +0.033        +0.064      +0.031     1.006   ok
+      ABS215 0.8567 ms           -0.507        -0.487      +0.020     0.952   ok
+      ABS215 1.4341 ms           -1.895        -1.952      -0.058     0.823   INCONSISTENT
+      largest |F| = 1.952   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.110 (1.1% error in the predicted value)
+
+  --- 1079 K / 3.444 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1310 ms           +0.163        +0.370      +0.207     1.038   ok
+      ABS215 0.2134 ms           -0.559        -0.456      +0.103     0.955   ok
+      ABS215 0.3743 ms           -0.087        -0.062      +0.024     0.994   ok
+      ABS215 0.4853 ms           +0.183        +0.132      -0.051     1.013   ok
+      ABS215 0.6694 ms           +0.598        +0.373      -0.225     1.038   ok
+      ABS215 0.7547 ms           -0.486        -0.809      -0.323     0.922   ok
+      ABS215 0.9812 ms           -0.277        -0.910      -0.633     0.913   ok
+      largest |F| = 0.910   all data points consistent
+      largest surrogate contribution to |F| = 0.633 (6.5% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1132 K / 3.55 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0491 ms           -0.616        -0.656      -0.041     0.936   ok
+      ABS215 0.0807 ms           -1.128        -1.246      -0.118     0.883   INCONSISTENT
+      ABS215 0.1156 ms           -0.317        -0.471      -0.154     0.954   ok
+      ABS215 0.1524 ms           +0.115        -0.071      -0.186     0.993   ok
+      ABS215 0.2267 ms           -0.241        -0.521      -0.280     0.949   ok
+      ABS215 0.2669 ms           +1.091        +0.734      -0.357     1.076   ok
+      ABS215 0.4159 ms           +2.253        +1.607      -0.646     1.174   INCONSISTENT
+      largest |F| = 1.607   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.646 (6.7% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1218 K / 3.038 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0137 ms           -0.630        -0.386      +0.244     0.962   ok
+      ABS215 0.0348 ms           +0.208        +0.263      +0.055     1.027   ok
+      ABS215 0.0434 ms           +0.268        +0.269      +0.001     1.027   ok
+      ABS215 0.0543 ms           +0.248        +0.199      -0.049     1.020   ok
+      ABS215 0.0790 ms           +0.167        -0.034      -0.201     0.997   ok
+      ABS215 0.0936 ms           -0.953        -1.269      -0.317     0.881   INCONSISTENT
+      ABS215 0.1276 ms           -0.409        -1.099      -0.689     0.896   INCONSISTENT
+      largest |F| = 1.269   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.689 (7.1% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+      prediction for 968 K: largest |F| = 0.695   passes
+
+  --- fit on 1192, 1398, 1057, 968, 1079, 1132, 1218 K, predict 1015 K ----
+      x* = [-0.1969 -0.1844  0.0226  0.0555 -0.1167 -0.0176 -0.2404  0.2782 -0.4521
+  0.3502 -0.2807  0.0338  0.     -0.252   0.0683 -0.0313]
+
+  --- 1192 K / 1.95 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0089 ms           +0.034        -0.087      -0.121     0.996   ok
+      OH     0.0615 ms           +0.575        +0.862      +0.287     1.044   ok
+      OH     0.5186 ms           -0.162        +1.434      +1.595     1.074   INCONSISTENT
+      OH     0.6359 ms           -0.488        +1.040      +1.528     1.053   INCONSISTENT
+      H2O    0.0090 ms           -0.997        -1.041      -0.044     0.949   INCONSISTENT
+      H2O    0.0930 ms           +0.389        +0.493      +0.104     1.025   ok
+      H2O    0.3692 ms           +0.379        +0.541      +0.162     1.027   ok
+      largest |F| = 1.434   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 1.595 (8.3% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0048 ms           +0.024        -0.123      -0.148     0.994   ok
+      OH     0.0130 ms           -0.501        -1.331      -0.830     0.936   INCONSISTENT
+      OH     0.0519 ms           +0.230        +0.774      +0.544     1.039   ok
+      OH     0.0858 ms           +0.269        -0.531      -0.800     0.974   ok
+      H2O    0.0019 ms           -2.086        -2.090      -0.004     0.901   INCONSISTENT
+      H2O    0.0088 ms           +0.295        +0.384      +0.089     1.019   ok
+      H2O    0.0468 ms           +0.213        +0.148      -0.065     1.007   ok
+      largest |F| = 2.090   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.830 (4.2% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1057 K / 1.83 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      H2O    0.1217 ms           -0.503        -0.480      +0.023     0.976   ok
+      H2O    0.4883 ms           -0.231        -0.191      +0.041     0.991   ok
+      H2O    0.9799 ms           -0.132        -0.056      +0.076     0.997   ok
+      H2O    1.6141 ms           -0.064        +0.020      +0.084     1.001   ok
+      H2O    3.6808 ms           +0.124        +0.167      +0.043     1.008   ok
+      H2O    4.8448 ms           -0.073        -0.052      +0.021     0.997   ok
+      H2O    5.5707 ms           +0.045        +0.058      +0.013     1.003   ok
+      largest |F| = 0.480   all data points consistent
+      largest surrogate contribution to |F| = 0.084 (0.4% error in the predicted value)
+
+  --- 968 K / 3.59 atm   tau = +0.000 us ----------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0379 ms           +0.030        +0.026      -0.005     1.003   ok
+      ABS215 0.1227 ms           +0.346        +0.340      -0.006     1.035   ok
+      ABS215 0.2013 ms           +0.511        +0.519      +0.008     1.053   ok
+      ABS215 0.2931 ms           +0.114        +0.123      +0.009     1.012   ok
+      ABS215 0.3719 ms           -0.083        -0.087      -0.004     0.991   ok
+      ABS215 0.8236 ms           -0.090        -0.130      -0.040     0.987   ok
+      ABS215 1.4021 ms           -0.593        -0.634      -0.041     0.939   ok
+      largest |F| = 0.634   all data points consistent
+      largest surrogate contribution to |F| = 0.041 (0.4% error in the predicted value)
+
+  --- 1015 K / 3.298 atm   [HELD OUT: this is a prediction]   tau = +0.000 us 
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1796 ms           -0.098        -0.028      +0.070     0.997   ok
+      ABS215 0.2710 ms           -0.550        -0.531      +0.019     0.948   ok
+      ABS215 0.3638 ms           -0.413        -0.409      +0.004     0.960   ok
+      ABS215 0.4687 ms           -0.467        -0.469      -0.002     0.954   ok
+      ABS215 0.7372 ms           -0.702        -0.731      -0.029     0.930   ok
+      ABS215 0.8567 ms           -1.248        -1.291      -0.043     0.879   INCONSISTENT
+      ABS215 1.4341 ms           -2.637        -2.783      -0.146     0.757   INCONSISTENT
+      largest |F| = 2.783   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.146 (1.5% error in the predicted value)
+
+  --- 1079 K / 3.444 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1310 ms           +0.085        +0.313      +0.228     1.032   ok
+      ABS215 0.2134 ms           -0.783        -0.654      +0.129     0.937   ok
+      ABS215 0.3743 ms           -0.374        -0.316      +0.058     0.969   ok
+      ABS215 0.4853 ms           -0.092        -0.098      -0.006     0.990   ok
+      ABS215 0.6694 ms           +0.379        +0.221      -0.159     1.022   ok
+      ABS215 0.7547 ms           -0.665        -0.914      -0.249     0.913   ok
+      ABS215 0.9812 ms           -0.316        -0.856      -0.539     0.918   ok
+      largest |F| = 0.914   all data points consistent
+      largest surrogate contribution to |F| = 0.539 (5.5% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1132 K / 3.55 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0491 ms           -0.544        -0.536      +0.008     0.948   ok
+      ABS215 0.0807 ms           -1.197        -1.152      +0.046     0.891   INCONSISTENT
+      ABS215 0.1156 ms           -0.475        -0.430      +0.046     0.958   ok
+      ABS215 0.1524 ms           -0.084        -0.056      +0.028     0.994   ok
+      ABS215 0.2267 ms           -0.436        -0.465      -0.029     0.955   ok
+      ABS215 0.2669 ms           +0.924        +0.846      -0.078     1.088   ok
+      ABS215 0.4159 ms           +2.286        +2.038      -0.249     1.226   INCONSISTENT
+      largest |F| = 2.038   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.249 (2.5% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1218 K / 3.038 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0137 ms           -0.689        -0.477      +0.211     0.953   ok
+      ABS215 0.0348 ms           +0.216        +0.340      +0.124     1.035   ok
+      ABS215 0.0434 ms           +0.290        +0.363      +0.074     1.037   ok
+      ABS215 0.0543 ms           +0.297        +0.309      +0.012     1.031   ok
+      ABS215 0.0790 ms           +0.321        +0.148      -0.173     1.015   ok
+      ABS215 0.0936 ms           -0.714        -1.017      -0.303     0.903   INCONSISTENT
+      ABS215 0.1276 ms           +0.059        -0.616      -0.675     0.940   ok
+      largest |F| = 1.017   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.675 (7.0% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+      prediction for 1015 K: largest |F| = 2.783   FAILS
+
+  --- fit on 1192, 1398, 1057, 968, 1015, 1132, 1218 K, predict 1079 K ----
+      x* = [-0.2049 -0.1917  0.0156  0.0455 -0.1041 -0.037  -0.1906  0.3295 -0.4246
+  0.2637 -0.2151  0.0259 -0.4034 -0.      0.0957 -0.0346]
+
+  --- 1192 K / 1.95 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0089 ms           +0.143        +0.051      -0.093     1.003   ok
+      OH     0.0615 ms           +0.497        +0.779      +0.282     1.040   ok
+      OH     0.5186 ms           -0.241        +0.765      +1.007     1.039   ok
+      OH     0.6359 ms           -0.506        +0.354      +0.860     1.018   ok
+      H2O    0.0090 ms           -1.000        -1.040      -0.040     0.949   INCONSISTENT
+      H2O    0.0930 ms           +0.414        +0.498      +0.083     1.025   ok
+      H2O    0.3692 ms           +0.363        +0.522      +0.160     1.026   ok
+      largest |F| = 1.040   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 1.007 (5.2% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0048 ms           +0.135        +0.061      -0.074     1.003   ok
+      OH     0.0130 ms           -0.515        -1.167      -0.652     0.943   INCONSISTENT
+      OH     0.0519 ms           +0.195        +0.641      +0.446     1.033   ok
+      OH     0.0858 ms           +0.349        -0.405      -0.754     0.980   ok
+      H2O    0.0019 ms           -2.082        -2.088      -0.006     0.901   INCONSISTENT
+      H2O    0.0088 ms           +0.311        +0.390      +0.079     1.020   ok
+      H2O    0.0468 ms           +0.195        +0.144      -0.051     1.007   ok
+      largest |F| = 2.088   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.754 (3.8% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1057 K / 1.83 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      H2O    0.1217 ms           -0.499        -0.479      +0.020     0.976   ok
+      H2O    0.4883 ms           -0.231        -0.191      +0.041     0.991   ok
+      H2O    0.9799 ms           -0.138        -0.069      +0.069     0.997   ok
+      H2O    1.6141 ms           -0.073        -0.001      +0.072     1.000   ok
+      H2O    3.6808 ms           +0.117        +0.152      +0.035     1.008   ok
+      H2O    4.8448 ms           -0.078        -0.062      +0.016     0.997   ok
+      H2O    5.5707 ms           +0.042        +0.051      +0.009     1.003   ok
+      largest |F| = 0.479   all data points consistent
+      largest surrogate contribution to |F| = 0.072 (0.4% error in the predicted value)
+
+  --- 968 K / 3.59 atm   tau = +0.000 us ----------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0379 ms           +0.015        +0.013      -0.002     1.001   ok
+      ABS215 0.1227 ms           +0.300        +0.303      +0.004     1.031   ok
+      ABS215 0.2013 ms           +0.459        +0.492      +0.033     1.050   ok
+      ABS215 0.2931 ms           +0.089        +0.132      +0.044     1.013   ok
+      ABS215 0.3719 ms           -0.077        -0.043      +0.034     0.996   ok
+      ABS215 0.8236 ms           +0.036        +0.021      -0.015     1.002   ok
+      ABS215 1.4021 ms           -0.431        -0.458      -0.027     0.955   ok
+      largest |F| = 0.492   all data points consistent
+      largest surrogate contribution to |F| = 0.044 (0.4% error in the predicted value)
+
+  --- 1015 K / 3.298 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1796 ms           +0.282        +0.373      +0.091     1.038   ok
+      ABS215 0.2710 ms           -0.076        -0.056      +0.020     0.994   ok
+      ABS215 0.3638 ms           +0.111        +0.115      +0.004     1.012   ok
+      ABS215 0.4687 ms           +0.084        +0.085      +0.001     1.009   ok
+      ABS215 0.7372 ms           -0.130        -0.149      -0.019     0.985   ok
+      ABS215 0.8567 ms           -0.673        -0.704      -0.031     0.932   ok
+      ABS215 1.4341 ms           -2.057        -2.173      -0.116     0.805   INCONSISTENT
+      largest |F| = 2.173   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.116 (1.2% error in the predicted value)
+
+  --- 1079 K / 3.444 atm   [HELD OUT: this is a prediction]   tau = +0.000 us 
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1310 ms           -0.256        +0.058      +0.313     1.006   ok
+      ABS215 0.2134 ms           -1.009        -0.812      +0.197     0.922   ok
+      ABS215 0.3743 ms           -0.548        -0.405      +0.142     0.960   ok
+      ABS215 0.4853 ms           -0.271        -0.171      +0.099     0.983   ok
+      ABS215 0.6694 ms           +0.175        +0.162      -0.013     1.016   ok
+      ABS215 0.7547 ms           -0.882        -0.967      -0.085     0.908   ok
+      ABS215 0.9812 ms           -0.572        -0.895      -0.323     0.914   ok
+      largest |F| = 0.967   all data points consistent
+      largest surrogate contribution to |F| = 0.323 (3.3% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1132 K / 3.55 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0491 ms           -0.683        -0.694      -0.011     0.933   ok
+      ABS215 0.0807 ms           -1.212        -1.247      -0.035     0.883   INCONSISTENT
+      ABS215 0.1156 ms           -0.403        -0.456      -0.053     0.955   ok
+      ABS215 0.1524 ms           +0.036        -0.029      -0.065     0.997   ok
+      ABS215 0.2267 ms           -0.280        -0.377      -0.097     0.963   ok
+      ABS215 0.2669 ms           +1.084        +0.954      -0.131     1.100   ok
+      ABS215 0.4159 ms           +2.439        +2.195      -0.244     1.245   INCONSISTENT
+      largest |F| = 2.195   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.244 (2.5% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1218 K / 3.038 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0137 ms           -0.912        -0.631      +0.281     0.939   ok
+      ABS215 0.0348 ms           +0.030        +0.229      +0.199     1.023   ok
+      ABS215 0.0434 ms           +0.135        +0.288      +0.153     1.029   ok
+      ABS215 0.0543 ms           +0.175        +0.277      +0.102     1.028   ok
+      ABS215 0.0790 ms           +0.232        +0.191      -0.041     1.019   ok
+      ABS215 0.0936 ms           -0.800        -0.938      -0.138     0.910   ok
+      ABS215 0.1276 ms           -0.054        -0.467      -0.413     0.954   ok
+      largest |F| = 0.938   all data points consistent
+      largest surrogate contribution to |F| = 0.413 (4.2% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+      prediction for 1079 K: largest |F| = 0.967   passes
+
+  --- fit on 1192, 1398, 1057, 968, 1015, 1079, 1218 K, predict 1132 K ----
+      x* = [-0.2207 -0.2193  0.0229  0.0424 -0.0597 -0.0046 -0.2073  0.2681 -0.3095
+  0.2075 -0.0983  0.1079 -0.2174  0.1067  0.     -0.1023]
+
+  --- 1192 K / 1.95 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0089 ms           +0.078        +0.004      -0.073     1.000   ok
+      OH     0.0615 ms           +0.492        +0.714      +0.223     1.036   ok
+      OH     0.5186 ms           -0.283        +0.018      +0.301     1.001   ok
+      OH     0.6359 ms           -0.449        -0.437      +0.012     0.978   ok
+      H2O    0.0090 ms           -1.004        -1.080      -0.076     0.947   INCONSISTENT
+      H2O    0.0930 ms           +0.265        +0.321      +0.056     1.016   ok
+      H2O    0.3692 ms           +0.282        +0.417      +0.135     1.021   ok
+      largest |F| = 1.080   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.301 (1.5% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0048 ms           +0.182        +0.194      +0.012     1.010   ok
+      OH     0.0130 ms           -0.490        -0.883      -0.393     0.957   ok
+      OH     0.0519 ms           +0.134        +0.495      +0.361     1.025   ok
+      OH     0.0858 ms           +0.421        -0.185      -0.606     0.991   ok
+      H2O    0.0019 ms           -2.107        -2.131      -0.024     0.899   INCONSISTENT
+      H2O    0.0088 ms           +0.143        +0.207      +0.064     1.010   ok
+      H2O    0.0468 ms           +0.113        +0.100      -0.012     1.005   ok
+      largest |F| = 2.131   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.606 (3.1% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1057 K / 1.83 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      H2O    0.1217 ms           -0.551        -0.539      +0.012     0.973   ok
+      H2O    0.4883 ms           -0.376        -0.344      +0.032     0.983   ok
+      H2O    0.9799 ms           -0.325        -0.272      +0.053     0.986   ok
+      H2O    1.6141 ms           -0.257        -0.202      +0.055     0.990   ok
+      H2O    3.6808 ms           +0.026        +0.052      +0.026     1.003   ok
+      H2O    4.8448 ms           -0.129        -0.121      +0.008     0.994   ok
+      H2O    5.5707 ms           +0.007        +0.009      +0.001     1.000   ok
+      largest |F| = 0.539   all data points consistent
+      largest surrogate contribution to |F| = 0.055 (0.3% error in the predicted value)
+
+  --- 968 K / 3.59 atm   tau = +0.000 us ----------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0379 ms           -0.116        -0.119      -0.003     0.988   ok
+      ABS215 0.1227 ms           +0.143        +0.129      -0.014     1.013   ok
+      ABS215 0.2013 ms           +0.355        +0.356      +0.001     1.036   ok
+      ABS215 0.2931 ms           +0.062        +0.074      +0.011     1.007   ok
+      ABS215 0.3719 ms           -0.051        -0.038      +0.013     0.996   ok
+      ABS215 0.8236 ms           +0.187        +0.190      +0.003     1.019   ok
+      ABS215 1.4021 ms           -0.200        -0.217      -0.017     0.978   ok
+      largest |F| = 0.356   all data points consistent
+      largest surrogate contribution to |F| = 0.017 (0.2% error in the predicted value)
+
+  --- 1015 K / 3.298 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1796 ms           +0.051        +0.227      +0.176     1.023   ok
+      ABS215 0.2710 ms           -0.141        -0.069      +0.073     0.993   ok
+      ABS215 0.3638 ms           +0.139        +0.181      +0.042     1.018   ok
+      ABS215 0.4687 ms           +0.170        +0.203      +0.033     1.021   ok
+      ABS215 0.7372 ms           +0.037        +0.052      +0.015     1.005   ok
+      ABS215 0.8567 ms           -0.477        -0.469      +0.008     0.954   ok
+      ABS215 1.4341 ms           -1.736        -1.774      -0.039     0.837   INCONSISTENT
+      largest |F| = 1.774   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.176 (1.8% error in the predicted value)
+
+  --- 1079 K / 3.444 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1310 ms           -0.256        +0.080      +0.336     1.008   ok
+      ABS215 0.2134 ms           -0.788        -0.589      +0.199     0.943   ok
+      ABS215 0.3743 ms           -0.117        +0.003      +0.120     1.000   ok
+      ABS215 0.4853 ms           +0.260        +0.332      +0.072     1.034   ok
+      ABS215 0.6694 ms           +0.851        +0.818      -0.032     1.085   ok
+      ABS215 0.7547 ms           -0.142        -0.240      -0.097     0.976   ok
+      ABS215 0.9812 ms           +0.330        +0.024      -0.306     1.002   ok
+      largest |F| = 0.818   all data points consistent
+      largest surrogate contribution to |F| = 0.336 (3.4% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1132 K / 3.55 atm   [HELD OUT: this is a prediction]   tau = +0.000 us 
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0491 ms           -0.760        -0.725      +0.035     0.930   ok
+      ABS215 0.0807 ms           -1.023        -1.068      -0.045     0.899   INCONSISTENT
+      ABS215 0.1156 ms           -0.017        -0.095      -0.078     0.991   ok
+      ABS215 0.1524 ms           +0.553        +0.470      -0.082     1.048   ok
+      ABS215 0.2267 ms           +0.394        +0.318      -0.076     1.032   ok
+      ABS215 0.2669 ms           +1.822        +1.736      -0.086     1.190   INCONSISTENT
+      ABS215 0.4159 ms           +3.390        +3.291      -0.099     1.390   INCONSISTENT
+      largest |F| = 3.291   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.099 (1.0% error in the predicted value)
+
+  --- 1218 K / 3.038 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0137 ms           -1.202        -0.840      +0.363     0.919   ok
+      ABS215 0.0348 ms           +0.004        +0.291      +0.287     1.029   ok
+      ABS215 0.0434 ms           +0.215        +0.465      +0.250     1.048   ok
+      ABS215 0.0543 ms           +0.369        +0.582      +0.213     1.060   ok
+      ABS215 0.0790 ms           +0.594        +0.725      +0.131     1.075   ok
+      ABS215 0.0936 ms           -0.372        -0.292      +0.080     0.971   ok
+      ABS215 0.1276 ms           +0.478        +0.424      -0.054     1.043   ok
+      largest |F| = 0.840   all data points consistent
+      largest surrogate contribution to |F| = 0.363 (3.7% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+      prediction for 1132 K: largest |F| = 3.291   FAILS
+
+  --- fit on 1192, 1398, 1057, 968, 1015, 1079, 1132 K, predict 1218 K ----
+      x* = [-0.2054 -0.1993  0.1863  0.1971 -0.0428  0.0666 -0.2785  0.4379 -0.3888
+  0.1786 -0.3038  0.1134 -0.244  -0.1194  0.0482  0.    ]
+
+  --- 1192 K / 1.95 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0089 ms           +0.563        +0.492      -0.071     1.025   ok
+      OH     0.0615 ms           -0.043        -0.315      -0.273     0.984   ok
+      OH     0.5186 ms           -0.057        -0.417      -0.360     0.979   ok
+      OH     0.6359 ms           +0.000        -0.382      -0.382     0.981   ok
+      H2O    0.0090 ms           -1.012        -1.088      -0.076     0.947   INCONSISTENT
+      H2O    0.0930 ms           +0.347        +0.503      +0.157     1.025   ok
+      H2O    0.3692 ms           +0.363        +0.575      +0.213     1.029   ok
+      largest |F| = 1.088   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.382 (1.9% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1398 K / 1.91 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      OH     0.0048 ms           +0.416        +0.581      +0.165     1.029   ok
+      OH     0.0130 ms           -0.685        -1.182      -0.497     0.943   INCONSISTENT
+      OH     0.0519 ms           -0.034        +0.702      +0.737     1.036   ok
+      OH     0.0858 ms           +0.130        -0.622      -0.752     0.969   ok
+      H2O    0.0019 ms           -2.164        -2.218      -0.054     0.895   INCONSISTENT
+      H2O    0.0088 ms           +0.263        +0.331      +0.068     1.017   ok
+      H2O    0.0468 ms           +0.260        +0.287      +0.027     1.014   ok
+      largest |F| = 2.218   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.752 (3.8% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1057 K / 1.83 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      H2O    0.1217 ms           -0.513        -0.502      +0.011     0.975   ok
+      H2O    0.4883 ms           -0.288        -0.233      +0.055     0.988   ok
+      H2O    0.9799 ms           -0.204        -0.112      +0.092     0.994   ok
+      H2O    1.6141 ms           -0.133        -0.033      +0.100     0.998   ok
+      H2O    3.6808 ms           +0.093        +0.159      +0.066     1.008   ok
+      H2O    4.8448 ms           -0.089        -0.047      +0.043     0.998   ok
+      H2O    5.5707 ms           +0.035        +0.067      +0.032     1.003   ok
+      largest |F| = 0.502   all data points consistent
+      largest surrogate contribution to |F| = 0.100 (0.5% error in the predicted value)
+
+  --- 968 K / 3.59 atm   tau = +0.000 us ----------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0379 ms           -0.056        -0.056      -0.000     0.994   ok
+      ABS215 0.1227 ms           +0.262        +0.268      +0.007     1.027   ok
+      ABS215 0.2013 ms           +0.464        +0.500      +0.036     1.051   ok
+      ABS215 0.2931 ms           +0.143        +0.198      +0.055     1.020   ok
+      ABS215 0.3719 ms           +0.010        +0.069      +0.059     1.007   ok
+      ABS215 0.8236 ms           +0.199        +0.248      +0.049     1.025   ok
+      ABS215 1.4021 ms           -0.228        -0.194      +0.034     0.981   ok
+      largest |F| = 0.500   all data points consistent
+      largest surrogate contribution to |F| = 0.059 (0.6% error in the predicted value)
+
+  --- 1015 K / 3.298 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1796 ms           +0.266        +0.374      +0.107     1.038   ok
+      ABS215 0.2710 ms           -0.016        +0.028      +0.044     1.003   ok
+      ABS215 0.3638 ms           +0.211        +0.249      +0.037     1.025   ok
+      ABS215 0.4687 ms           +0.207        +0.248      +0.041     1.025   ok
+      ABS215 0.7372 ms           +0.019        +0.046      +0.027     1.005   ok
+      ABS215 0.8567 ms           -0.516        -0.498      +0.018     0.951   ok
+      ABS215 1.4341 ms           -1.880        -1.933      -0.053     0.824   INCONSISTENT
+      largest |F| = 1.933   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.107 (1.1% error in the predicted value)
+
+  --- 1079 K / 3.444 atm   tau = +0.000 us --------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.1310 ms           +0.046        +0.250      +0.205     1.025   ok
+      ABS215 0.2134 ms           -0.642        -0.549      +0.093     0.947   ok
+      ABS215 0.3743 ms           -0.139        -0.134      +0.005     0.987   ok
+      ABS215 0.4853 ms           +0.141        +0.069      -0.073     1.007   ok
+      ABS215 0.6694 ms           +0.568        +0.321      -0.248     1.033   ok
+      ABS215 0.7547 ms           -0.512        -0.857      -0.344     0.918   ok
+      ABS215 0.9812 ms           -0.299        -0.947      -0.649     0.910   ok
+      largest |F| = 0.947   all data points consistent
+      largest surrogate contribution to |F| = 0.649 (6.7% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1132 K / 3.55 atm   tau = +0.000 us ---------------------------------
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0491 ms           -0.758        -0.792      -0.034     0.924   ok
+      ABS215 0.0807 ms           -1.262        -1.381      -0.119     0.871   INCONSISTENT
+      ABS215 0.1156 ms           -0.438        -0.591      -0.153     0.943   ok
+      ABS215 0.1524 ms           +0.003        -0.179      -0.182     0.982   ok
+      ABS215 0.2267 ms           -0.345        -0.616      -0.271     0.940   ok
+      ABS215 0.2669 ms           +0.988        +0.642      -0.346     1.066   ok
+      ABS215 0.4159 ms           +2.150        +1.519      -0.631     1.164   INCONSISTENT
+      largest |F| = 1.519   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.631 (6.5% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+
+  --- 1218 K / 3.038 atm   [HELD OUT: this is a prediction]   tau = +0.000 us 
+      target              F (surrogate)   F (Cantera)  difference  obs/pred   status
+      ABS215 0.0137 ms           -1.042        -0.789      +0.253     0.924   ok
+      ABS215 0.0348 ms           -0.239        -0.217      +0.022     0.979   ok
+      ABS215 0.0434 ms           -0.177        -0.210      -0.033     0.979   ok
+      ABS215 0.0543 ms           -0.196        -0.277      -0.081     0.973   ok
+      ABS215 0.0790 ms           -0.283        -0.505      -0.222     0.951   ok
+      ABS215 0.0936 ms           -1.408        -1.740      -0.332     0.840   INCONSISTENT
+      ABS215 0.1276 ms           -0.879        -1.573      -0.694     0.854   INCONSISTENT
+      largest |F| = 1.740   AT LEAST ONE DATA POINT CANNOT BE RECONCILED
+      largest surrogate contribution to |F| = 0.694 (7.2% error in the predicted value)
+      warning: the surrogate accounts for a noticeable part of the F value; judge consistency on the Cantera column only
+      prediction for 1218 K: largest |F| = 1.740   FAILS
+
+==============================================================================
+  [7]  FIGURES
+==============================================================================
+      saved analysis_8cond_bothlim_r3_dp_20261104_184049/profiles.png
+
+==============================================================================
+  [8]  SUMMARY
+==============================================================================
+
+  conditions fitted            : 1192, 1398, 1057, 968, 1015, 1079, 1132, 1218 K
+  free parameters              : 16 of 16
+  objective value              : 21.5544
+  sum of squared data residuals: 91.232 over 56 points
+  largest |F| (Cantera)        : 2.208   INCONSISTENT
+  surrogate shift in optimum   : 1.11 sd
+  directions still at prior    : 4 of 16
+  R1 significance              : p = 0.0000  significant
+  R2 significance              : p = 0.0121  significant
+  R5 significance              : p = 0.0039  significant
+  R4 significance              : p = 0.0000  significant
+  R3 significance              : p = 0.0000  significant
+  prediction of 1192 K          : largest |F| = 2.294  FAILS
+  prediction of 1398 K          : largest |F| = 3.136  FAILS
+  prediction of 1057 K          : largest |F| = 0.508  passes
+  prediction of 968 K          : largest |F| = 0.695  passes
+  prediction of 1015 K          : largest |F| = 2.783  FAILS
+  prediction of 1079 K          : largest |F| = 0.967  passes
+  prediction of 1132 K          : largest |F| = 3.291  FAILS
+  prediction of 1218 K          : largest |F| = 1.740  FAILS
+
+  elapsed: 112.6 s
+  written: analysis_8cond_bothlim_r3_dp_20261104_184049/analysis.log
+           analysis_8cond_bothlim_r3_dp_20261104_184049/result.json
+           analysis_8cond_bothlim_r3_dp_20261104_184049/profiles.png
